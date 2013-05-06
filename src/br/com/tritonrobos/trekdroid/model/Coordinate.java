@@ -9,8 +9,8 @@ package br.com.tritonrobos.trekdroid.model;
  */
 public class Coordinate {
 
-	private double latitude;
-	private double longitude;
+	private Double latitude;
+	private Double longitude;
 
 	/**
 	 * Construtor padrao.
@@ -27,7 +27,7 @@ public class Coordinate {
 	 * @param longitude
 	 *            the longitude to set
 	 */
-	public Coordinate(final double latitude, final double longitude) {
+	public Coordinate(final Double latitude, final Double longitude) {
 		this.latitude = latitude;
 		this.longitude = longitude;
 	}
@@ -35,7 +35,7 @@ public class Coordinate {
 	/**
 	 * @return the latitude
 	 */
-	public double getLatitude() {
+	public Double getLatitude() {
 		return latitude;
 	}
 
@@ -43,14 +43,14 @@ public class Coordinate {
 	 * @param latitude
 	 *            the latitude to set
 	 */
-	public void setLatitude(final double latitude) {
+	public void setLatitude(final Double latitude) {
 		this.latitude = latitude;
 	}
 
 	/**
 	 * @return the longitude
 	 */
-	public double getLongitude() {
+	public Double getLongitude() {
 		return longitude;
 	}
 
@@ -58,7 +58,7 @@ public class Coordinate {
 	 * @param longitude
 	 *            the longitude to set
 	 */
-	public void setLongitude(final double longitude) {
+	public void setLongitude(final Double longitude) {
 		this.longitude = longitude;
 	}
 
