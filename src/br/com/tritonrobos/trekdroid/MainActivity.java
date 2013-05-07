@@ -9,7 +9,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
@@ -21,7 +20,9 @@ public class MainActivity extends Activity {
 	private EditText edLatitude;
 	private EditText edLongitude;
 	private Button btLocalizar;
-	private List<Location> locations = new ArrayList<Location>();
+	private Button btSalvar;
+	private List<Coordinate> destinos = new ArrayList<Coordinate>();
+	private Coordinate coordenadaCorrente;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -47,14 +48,60 @@ public class MainActivity extends Activity {
 				startGPS();
 			}
 		});
+
+		btSalvar = (Button) findViewById(R.id.btSalvar);
+		btSalvar.setOnClickListener(new Button.OnClickListener() {
+			public void onClick(View v) {
+				addDestino(coordenadaCorrente);
+			}
+		});
+	}
+
+	/**
+	 * Adiciona uma coordenada na lista de coordenadas a serem localizadas pelo
+	 * Robo.
+	 * 
+	 * @param destino
+	 *            {@link Coordinate}
+	 */
+	private void addDestino(final Coordinate destino) {
+		this.destinos.add(destino);
+		this.loadCamposDestino();
+	}
+
+	/**
+	 * Popula os campos de destino (sequencialmente) com as coordenadas passadas
+	 * por parametro.
+	 * 
+	 * @param destino
+	 *            the {@link Coordinate}
+	 */
+	private void loadCamposDestino() {
+		if (this.destinos.isEmpty())
+			return;
+
+		// atualiza o primeiro campo
+		if (this.destinos.size() == 1)
+			return;
+
+		// atualiza o segundo campo
+		if (this.destinos.size() == 2)
+			return;
+
+		// atualiza o terceiro campo
+		if (this.destinos.size() == 3)
+			return;
 	}
 
 	// Método que faz a leitura de fato dos valores recebidos do GPS
 	public void startGPS() {
+
 		LocationManager lManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
 		LocationListener lListener = new LocationListener() {
 			public void onLocationChanged(Location locat) {
-				updateInputFieldsView(locat);
+				coordenadaCorrente = new Coordinate(locat);
+				updateInputFieldsView(coordenadaCorrente);
 			}
 
 			public void onStatusChanged(String provider, int status,
@@ -87,18 +134,12 @@ public class MainActivity extends Activity {
 	 * @param destino
 	 *            {@link Coordinate} de distino capturada
 	 */
-	public void updateInputFieldsView(final Location destino) {
+	public void updateInputFieldsView(final Coordinate destino) {
 
 		Double latPoint = destino.getLatitude();
 		Double lngPoint = destino.getLongitude();
 
 		edLatitude.setText(latPoint.toString());
 		edLongitude.setText(lngPoint.toString());
-
-		float distancia = destino.distanceTo(getLocationTest());
-		Log.v("GPS", distancia + " m");
-
-		float bearing = destino.bearingTo(getLocationTest());
-		Log.v("GPS", bearing + " bearing");
 	}
 }

@@ -24,46 +24,19 @@ Servo motorEsq;
 Servo motorDir;
 
 /**
+ * Para os motores do Robo.
+ */
+void pararMotores() {
+  motorEsq.write(ANGULO_MOTOR_PARADO);
+  motorDir.write(ANGULO_MOTOR_PARADO);
+}
+
+/**
  * Configura os motores do Robo.
  */
 void setupMotores() {
   motorEsq.attach(2);
-  motorDir.attach(3);  
-}
-
-/**
- * Configuracao geral do Robo.
- */
-void setup() {
-  setupMotores();
-}
-
-/**
- * Loop principal do Robo.
- */
-void loop() {
-  delay(2000);
-  moverParaFrente(VELOCIDADE_MIN);
-
-  delay(2000);
-  pararMotores();
-  
-  delay(2000);
-  moverParaTraz(VELOCIDADE_MIN);
-
-  delay(2000);
-  pararMotores();
-  
-  delay(2000);  
-  moverParaDireita(VELOCIDADE_MIN);
-  
-  delay(2000);
-  pararMotores();
-
-  delay(2000);  
-  moverParaEsquerda(VELOCIDADE_MIN);
-  
-  delay(2000);
+  motorDir.attach(3);
   pararMotores();
 }
 
@@ -126,10 +99,22 @@ void moverParaEsquerda(unsigned int velocidade) {
 }
 
 /**
- * Para os motores do Robo.
+ * Rotaciona o robo 360 graus.
  */
-void pararMotores() {
-  motorEsq.write(ANGULO_MOTOR_PARADO);
-  motorDir.write(ANGULO_MOTOR_PARADO);
+void rotacionar360Graus() {
+  moverParaDireita(VELOCIDADE_MIN);
 }
 
+/**
+ * Configuracao geral do Robo.
+ */
+void setup() {
+  setupMotores();
+}
+
+/**
+ * Loop principal do Robo.
+ */
+void loop() {
+  rotacionar360Graus();
+}

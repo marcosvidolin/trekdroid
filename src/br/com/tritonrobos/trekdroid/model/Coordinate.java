@@ -1,5 +1,7 @@
 package br.com.tritonrobos.trekdroid.model;
 
+import android.location.Location;
+
 /**
  * Objeto que representa coordenadas geograficas (Latitude/Longitude).
  * 
@@ -30,6 +32,16 @@ public class Coordinate {
 	public Coordinate(final Double latitude, final Double longitude) {
 		this.latitude = latitude;
 		this.longitude = longitude;
+	}
+
+	/**
+	 * Construtor com parametro.
+	 * 
+	 * @param location
+	 *            the {@link Location}
+	 */
+	public Coordinate(final Location location) {
+		this(location.getLatitude(), location.getLongitude());
 	}
 
 	/**
