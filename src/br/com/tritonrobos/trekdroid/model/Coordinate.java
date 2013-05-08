@@ -1,6 +1,7 @@
 package br.com.tritonrobos.trekdroid.model;
 
 import android.location.Location;
+import br.com.tritonrobos.trekdroid.util.CoordinateUtil;
 
 /**
  * Objeto que representa coordenadas geograficas (Latitude/Longitude).
@@ -72,6 +73,31 @@ public class Coordinate {
 	 */
 	public void setLongitude(final Double longitude) {
 		this.longitude = longitude;
+	}
+
+	/**
+	 * Obtem a distancia em metros entre a coordenada corrente e a coordenada
+	 * informada por parametro.
+	 * 
+	 * @param destino
+	 *            {@link Coordinate}
+	 * @return {@link Double}
+	 */
+	public Double distanciaPara(final Coordinate destino) {
+		return CoordinateUtil.getDistancia(this, destino);
+	}
+
+	/**
+	 * Obtem o rolamento em graus para trassar o caminho mais curto entre a
+	 * coordenada corrente e a coordenada passada por parametro.
+	 * 
+	 * @param destino
+	 *            {@link Coordinate}
+	 * 
+	 * @return {@link Double}
+	 */
+	public Double rolamentoPara(final Coordinate destino) {
+		return CoordinateUtil.getRolamento(this, destino);
 	}
 
 }

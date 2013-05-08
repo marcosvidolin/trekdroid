@@ -56,24 +56,21 @@
         android:text="Salvar Localização" />
     
     <EditText
-        android:id="@+id/textCoord1"
+        android:id="@+id/edCoord1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:ems="10" />
     
     <EditText
-        android:id="@+id/textCoord2"
+        android:id="@+id/edCoord2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:ems="10" />
     
     <EditText
-        android:id="@+id/textCoord3"
+        android:id="@+id/edCoord3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:ems="10" />
     
     <Button

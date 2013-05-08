@@ -15,12 +15,24 @@ import android.widget.Button;
 import android.widget.EditText;
 import br.com.tritonrobos.trekdroid.model.Coordinate;
 
+/**
+ * Activity principal para controle da tela de captura de coordenadas.
+ * 
+ * @author vidolin
+ * @since 25/04/2013
+ */
 public class MainActivity extends Activity {
 
 	private EditText edLatitude;
 	private EditText edLongitude;
+	private EditText edCoord1;
+	private EditText edCoord2;
+	private EditText edCoord3;
+
 	private Button btLocalizar;
 	private Button btSalvar;
+	private Button btIniciarTrekking;
+
 	private List<Coordinate> destinos = new ArrayList<Coordinate>();
 	private Coordinate coordenadaCorrente;
 
@@ -37,10 +49,25 @@ public class MainActivity extends Activity {
 		return true;
 	}
 
-	// Método usado para importar os elementos da classe R
+	/**
+	 * Atualiza a coordenada corrente com os valores de latitude e longitude dos
+	 * campos da tela.
+	 */
+	private Coordinate getCoordenadaCorrente() {
+		coordenadaCorrente = new Coordinate(Double.valueOf(edLatitude.getText()
+				.toString()), Double.valueOf(edLongitude.getText().toString()));
+		return coordenadaCorrente;
+	}
+
+	/**
+	 * Método usado para importar os elementos da classe R.
+	 */
 	public void setupElements() {
 		edLatitude = (EditText) findViewById(R.id.edLatitude);
 		edLongitude = (EditText) findViewById(R.id.edLongitude);
+		edCoord1 = (EditText) findViewById(R.id.edCoord1);
+		edCoord2 = (EditText) findViewById(R.id.edCoord2);
+		edCoord3 = (EditText) findViewById(R.id.edCoord3);
 
 		btLocalizar = (Button) findViewById(R.id.btLocalizar);
 		btLocalizar.setOnClickListener(new Button.OnClickListener() {
@@ -52,7 +79,14 @@ public class MainActivity extends Activity {
 		btSalvar = (Button) findViewById(R.id.btSalvar);
 		btSalvar.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				addDestino(coordenadaCorrente);
+				addDestino(getCoordenadaCorrente());
+			}
+		});
+
+		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
+		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
+			public void onClick(View v) {
+				// TODO: iniciar trekking
 			}
 		});
 	}
@@ -66,7 +100,7 @@ public class MainActivity extends Activity {
 	 */
 	private void addDestino(final Coordinate destino) {
 		this.destinos.add(destino);
-		this.loadCamposDestino();
+		this.refreshCamposDestino();
 	}
 
 	/**
@@ -76,24 +110,37 @@ public class MainActivity extends Activity {
 	 * @param destino
 	 *            the {@link Coordinate}
 	 */
-	private void loadCamposDestino() {
+	private void refreshCamposDestino() {
 		if (this.destinos.isEmpty())
 			return;
 
+		Coordinate coord = getCoordenadaCorrente();
+
+		String str = coord.getLatitude().toString() + ", "
+				+ coord.getLongitude().toString();
+
 		// atualiza o primeiro campo
-		if (this.destinos.size() == 1)
+		if (this.destinos.size() == 1) {
+			edCoord1.setText(str);
 			return;
+		}
 
 		// atualiza o segundo campo
-		if (this.destinos.size() == 2)
+		if (this.destinos.size() == 2) {
+			edCoord2.setText(str);
 			return;
+		}
 
 		// atualiza o terceiro campo
-		if (this.destinos.size() == 3)
+		if (this.destinos.size() == 3) {
+			edCoord3.setText(str);
 			return;
+		}
 	}
 
-	// Método que faz a leitura de fato dos valores recebidos do GPS
+	/**
+	 * Método que faz a leitura de fato dos valores recebidos do GPS.
+	 */
 	public void startGPS() {
 
 		LocationManager lManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
