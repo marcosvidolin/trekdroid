@@ -33,6 +33,7 @@ Servo motorDir;
 void pararMotores() {
   motorEsq.write(ANGULO_MOTOR_PARADO);
   motorDir.write(ANGULO_MOTOR_PARADO);
+  delay(15);
 }
 
 /**
@@ -146,7 +147,8 @@ boolean isObjetoDetectadoViaSonar() {
   //Used to read in the pulse that is being sent by the MaxSonar device.
   //Pulse Width representation with a scale factor of 147 uS per Inch.
   pulse = pulseIn(SONAR_PIN, HIGH); //147uS per inch 
-  if (sonarPulsoParaCentimetros(pulse) > 0)
+  //if (sonarPulsoParaCentimetros(pulse) > 0)
+  if (sonarPulsoParaCentimetros(pulse) > 0 && sonarPulsoParaCentimetros(pulse) < 100)
     return true;
  
   return false;
@@ -159,11 +161,17 @@ boolean isObjetoDetectadoViaSonar() {
  * @return boolean indicando se o alvo foi encontrado
  */
 boolean rotacionarAteDetectarCone() {
-  rotacionar360Graus();
+  
+  // caso ja esteja alinhado com o cone
+  if (isObjetoDetectadoViaSonar()) {
+    pararMotores();
+    return true;
+  }
   
   // rotaciona ate encontrar o alvo, ou ate terminar os 360 graus
+  rotacionar360Graus();
   while (true) {
-
+    // cone detectado
     if (isObjetoDetectadoViaSonar()) {
       pararMotores();
       return true;
@@ -179,6 +187,8 @@ boolean rotacionarAteDetectarCone() {
 
 /**
  * Obtem a distancia em centimetros entre o Robo e o clone.
+ *
+ * @return unsigned int
  */
 unsigned int getDistanciaDoCone() {
   int pulse = pulseIn(SONAR_PIN, HIGH);
@@ -186,23 +196,47 @@ unsigned int getDistanciaDoCone() {
 }
 
 /**
- * Se aproxima do cone.
+ * Anda continuamente em direcao ao cone. Retorna true, caso esteja
+ * em uma distancia de 35 cm do cone (perto o bastante). Retorna falso
+ * caso o cone saia do radar do sonar.
+ *
+ * @return boolean
  */
-boolean andarParaCone() {
+boolean moverDirecaoCone() {
+  
+  // caso ja esteja proximo o suficiente do cone
+  if (getDistanciaDoCone() <= 35) {
+    pararMotores();
+    return true;
+  }
+  
+  moverParaFrente(VELOCIDADE_MIN);
   while (true) {
     // proximo o bastante
-    if (getDistanciaDoCone() <= 35)
+    if (getDistanciaDoCone() <= 35) {
+      pararMotores();
       return true;
+    }
 
     // perdeu o cone do sonar
-    if (getDistanciaDoCone() == 0)
+    if (getDistanciaDoCone() == 0) {
+      pararMotores();
       return false;
+    }
   }
 }
 
+/**
+ * Processo de busca de cone (Rotacionar/Andar para frente).
+ * Retorna true se o cone foi encontrado e PODE SER SINALIZADO.
+ * Retorna false caso ja tenha refeito o processo por algumas vezes
+ * e o clone nao foi localizado.
+ *
+ * @return boolean
+ */
 boolean encontrarCone() {
   if (rotacionarAteDetectarCone()) {
-    if (andarParaCone()) {
+    if (moverDirecaoCone()) {
       // chegou no cone
       // TODO: checar tablado branco?
       return true;
@@ -211,8 +245,8 @@ boolean encontrarCone() {
       encontrarCone();
     }
   } else {
-    // destino atingido via coordenadas e rotacionou,
-    // mas nao encontrou o cone. Protocolo alternatino.
+    // Nao encontrou o cone. Protocolo alternatino.
+    // Volta a consultar GPS?
   }
 }
 
@@ -224,9 +258,14 @@ void setup() {
   setupSonar();
 }
 
+boolean isConeEncontrado = false;
+
 /**
  * Loop principal do Robo.
  */
 void loop() {
-  encontrarCone();
+  if (!isConeEncontrado) {
+    encontrarCone();
+    isConeEncontrado = true;
+  }
 }
