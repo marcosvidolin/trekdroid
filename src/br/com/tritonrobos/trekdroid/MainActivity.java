@@ -5,15 +5,23 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import br.com.tritonrobos.trekdroid.http.client.ArduinoHttpClient;
 import br.com.tritonrobos.trekdroid.model.Coordinate;
+import br.com.tritonrobos.trekdroid.socket.TCPClient;
 
 /**
  * Activity principal para controle da tela de captura de coordenadas.
@@ -21,7 +29,7 @@ import br.com.tritonrobos.trekdroid.model.Coordinate;
  * @author vidolin
  * @since 25/04/2013
  */
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SensorEventListener {
 
 	private EditText edLatitude;
 	private EditText edLongitude;
@@ -36,10 +44,22 @@ public class MainActivity extends Activity {
 	private List<Coordinate> destinos = new ArrayList<Coordinate>();
 	private Coordinate coordenadaCorrente;
 
+	private TCPClient mTcpClient;
+
+	private SensorManager sensorManager = null;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+		// Register magnetic sensor
+		sensorManager.registerListener(this,
+				sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
+				SensorManager.SENSOR_DELAY_NORMAL);
+
 		setupElements();
 	}
 
@@ -57,6 +77,52 @@ public class MainActivity extends Activity {
 		coordenadaCorrente = new Coordinate(Double.valueOf(edLatitude.getText()
 				.toString()), Double.valueOf(edLongitude.getText().toString()));
 		return coordenadaCorrente;
+	}
+
+	/**
+	 * 
+	 * @author vidolin
+	 * 
+	 */
+	public class connectTask extends AsyncTask<String, String, TCPClient> {
+		@Override
+		protected TCPClient doInBackground(String... message) {
+			// we create a TCPClient object and
+			mTcpClient = new TCPClient(new TCPClient.OnMessageReceived() {
+				// here the messageReceived method is implemented
+				public void messageReceived(String message) {
+					// this method calls the onProgressUpdate
+					publishProgress(message);
+				}
+			});
+			mTcpClient.run();
+			return null;
+		}
+
+		protected void onProgressUpdate(String... values) {
+			super.onProgressUpdate(values);
+			Log.i("SOCKET", values[0]);
+		}
+	}
+
+	private void converterButtonAction() {
+		new AsyncTask<String, Void, String>() {
+			@Override
+			protected String doInBackground(String... params) {
+				return ArduinoHttpClient.sendCommand("1");
+			}
+
+			@Override
+			protected void onPostExecute(String result) {
+				System.out.println(result);
+			}
+
+			@Override
+			protected void onPreExecute() {
+
+			}
+
+		}.execute(new String[] {});
 	}
 
 	/**
@@ -83,10 +149,18 @@ public class MainActivity extends Activity {
 			}
 		});
 
+		// realiza a conexao com o Arduino (Servidor)
+		new connectTask().execute("");
+
 		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
 		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				// TODO: iniciar trekking
+				// envia a mensagem para o Arduino
+				/*
+				 * if (mTcpClient != null) {
+				 * mTcpClient.sendMessage("Teste Socket Android + Arduino"); }
+				 */
+				converterButtonAction();
 			}
 		});
 	}
@@ -188,5 +262,22 @@ public class MainActivity extends Activity {
 
 		edLatitude.setText(latPoint.toString());
 		edLongitude.setText(lngPoint.toString());
+	}
+
+	public void onAccuracyChanged(Sensor arg0, int arg1) {
+		// TODO Auto-generated method stub
+	}
+
+	public void onSensorChanged(SensorEvent event) {
+		synchronized (this) {
+			if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+				edCoord1.setText(Double
+						.toString((event.values[0] + 360.0) % 360.0));
+				edCoord2.setText(Double
+						.toString((event.values[1] + 360.0) % 360.0));
+				edCoord3.setText(Double
+						.toString((event.values[2] + 360.0) % 360.0));
+			}
+		}
 	}
 }

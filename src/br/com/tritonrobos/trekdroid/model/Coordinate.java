@@ -46,10 +46,25 @@ public class Coordinate {
 	}
 
 	/**
+	 * Remove os tres ultimos digitos da coordenada informada.
+	 * 
+	 * @param coordinate
+	 *            the coordinate to round
+	 * @return Double
+	 */
+	private Double roundCoordinate(final Double coordinate) {
+		String str = coordinate.toString();
+		int diff = str.length() - 9;
+		if (diff > 0)
+			str = str.substring(0, str.length() - diff);
+		return Double.valueOf(str);
+	}
+
+	/**
 	 * @return the latitude
 	 */
 	public Double getLatitude() {
-		return latitude;
+		return this.roundCoordinate(latitude);
 	}
 
 	/**
@@ -64,7 +79,7 @@ public class Coordinate {
 	 * @return the longitude
 	 */
 	public Double getLongitude() {
-		return longitude;
+		return this.roundCoordinate(longitude);
 	}
 
 	/**

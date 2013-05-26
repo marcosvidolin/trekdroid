@@ -5,27 +5,61 @@
  */
 
 #include <Servo.h>
+#include <SPI.h>
+#include <Ethernet.h>
 
 
-const unsigned int MOTOR_ESQUERDO_PIN = 2;
-const unsigned int MOTOR_DIREITO_PIN = 3;
-const unsigned int SONAR_PIN = 4;
+//
+// Constantes referentes aos pinos utilizados no Arduino.
+const unsigned int SONAR_PIN          = 2;
+const unsigned int MOTOR_ESQUERDO_PIN = 5;
+const unsigned int MOTOR_DIREITO_PIN  = 6;
 
-
+//
+// Constantes referentes aos motores.
 const unsigned int VELOCIDADE_MIN = 1;
 const unsigned int VELOCIDADE_MAX = 2;
-
 const unsigned int ANGULO_MOTOR_PARADO = 95;
-
 const unsigned int ANGULO_MIN_FRENTE = 110;
 const unsigned int ANGULO_MAX_FRENTE = 120;
-
 const unsigned int ANGULO_MIN_RE = 80;
 const unsigned int ANGULO_MAX_RE = 70;
 
+//
+// Constantes referentes ao sonar (distancia do cone).
+const unsigned int DISTANCIA_CONE_ENCONTRADO_CM = 20;
+const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 100;
 
+//
+// Constantes referentes aos commandos recebidos do Android.
+const unsigned char COMANDO_PARAR_MOTORES  = '0';
+const unsigned char COMANDO_ANDAR_FRENTE   = '1';
+const unsigned char COMANDO_GIRAR_ESQUESDA = '2';
+const unsigned char COMANDO_GIRAR_DIREITA  = '3';
+const unsigned char COMANDO_LOCALIZAR_CONE = '4';
+
+//
+// Variaveis globais do sistema.
 Servo motorEsq;
 Servo motorDir;
+
+EthernetServer server = EthernetServer(80);
+
+boolean isConeEncontrado = false;
+
+
+/**
+ * Configura a placa Ethernet.
+ */
+void setupEthernet() {
+  // start the Ethernet connection and the server:
+  byte ip[] = {192, 168, 1, 199};
+  byte gateway[] = {192, 168, 1, 1}; 
+  byte subnet[] = {255, 255, 255, 0};
+  byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+  Ethernet.begin(mac, ip, gateway, subnet);
+  server.begin();
+}
 
 /**
  * Para os motores do Robo.
@@ -118,7 +152,7 @@ void moverParaEsquerda(unsigned int velocidade) {
  * Rotaciona o robo 360 graus.
  */
 void rotacionar360Graus() {
-  moverParaDireita(VELOCIDADE_MIN);
+  moverParaDireita(VELOCIDADE_MAX);
 }
 
 /**
@@ -148,7 +182,7 @@ boolean isObjetoDetectadoViaSonar() {
   //Pulse Width representation with a scale factor of 147 uS per Inch.
   pulse = pulseIn(SONAR_PIN, HIGH); //147uS per inch 
   //if (sonarPulsoParaCentimetros(pulse) > 0)
-  if (sonarPulsoParaCentimetros(pulse) > 0 && sonarPulsoParaCentimetros(pulse) < 100)
+  if (sonarPulsoParaCentimetros(pulse) > 0 && sonarPulsoParaCentimetros(pulse) < DISTANCIA_CONE_FORA_RADAR_CM)
     return true;
  
   return false;
@@ -197,7 +231,7 @@ unsigned int getDistanciaDoCone() {
 
 /**
  * Anda continuamente em direcao ao cone. Retorna true, caso esteja
- * em uma distancia de 35 cm do cone (perto o bastante). Retorna falso
+ * em uma distancia de 20 cm do cone (perto o bastante). Retorna falso
  * caso o cone saia do radar do sonar.
  *
  * @return boolean
@@ -205,21 +239,21 @@ unsigned int getDistanciaDoCone() {
 boolean moverDirecaoCone() {
   
   // caso ja esteja proximo o suficiente do cone
-  if (getDistanciaDoCone() <= 35) {
+  if (getDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
     pararMotores();
     return true;
   }
   
-  moverParaFrente(VELOCIDADE_MIN);
+  moverParaFrente(VELOCIDADE_MAX);
   while (true) {
     // proximo o bastante
-    if (getDistanciaDoCone() <= 35) {
+    if (getDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
       pararMotores();
       return true;
     }
 
     // perdeu o cone do sonar
-    if (getDistanciaDoCone() == 0) {
+    if (getDistanciaDoCone() >= DISTANCIA_CONE_FORA_RADAR_CM) {
       pararMotores();
       return false;
     }
@@ -251,21 +285,87 @@ boolean encontrarCone() {
 }
 
 /**
+ * Executa os comandos recebidos do Android.
+ */
+void executarComando(unsigned char command) {
+  switch(command) {
+    case COMANDO_PARAR_MOTORES:
+      pararMotores(); 
+      break;
+    case COMANDO_ANDAR_FRENTE:
+      moverParaFrente(VELOCIDADE_MAX);
+      break;
+    case COMANDO_GIRAR_ESQUESDA:
+      moverParaEsquerda(VELOCIDADE_MAX);
+      break;
+    case COMANDO_GIRAR_DIREITA:
+      moverParaDireita(VELOCIDADE_MAX);
+      break;
+    case COMANDO_LOCALIZAR_CONE:
+      encontrarCone();
+      break;
+  }
+}
+
+/**
+ * Inicia o servidor HTTP do Robo.
+ */
+void initHttpServer() {
+  // listen for incoming clients
+  EthernetClient client = server.available();
+  unsigned int characters = 0;
+  if (client) {
+    while (client.connected()) {
+      if (client.available()) {
+
+        char c = client.read();
+        ++characters;
+               
+        // 123456789
+        // GET /1        
+        if (characters == 6) {
+          Serial.println(c);
+          executarComando(c);
+
+          // send a standard http response header
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println();
+          break;
+        }
+        
+      }
+    }
+    // give the web browser time to receive the data
+    delay(1);
+    // close the connection:
+    client.stop();
+  }
+}
+
+/**
  * Configuracao geral do Robo.
  */
 void setup() {
+  setupEthernet();
   setupMotores();
   setupSonar();
+  Serial.begin(9600);
 }
-
-boolean isConeEncontrado = false;
 
 /**
  * Loop principal do Robo.
  */
 void loop() {
+ initHttpServer();
+}
+
+
+
+
+/*void loop() {
   if (!isConeEncontrado) {
     encontrarCone();
     isConeEncontrado = true;
   }
-}
+}*/
