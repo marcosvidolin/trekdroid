@@ -1,19 +1,22 @@
-- Gerar um apk via Eclipse
+- [Eclipse] Gerar um apk via Eclipse:
 http://linguagensdeprogramacao.wordpress.com/2012/07/23/gerando-apk-no-eclipse/
 
-- Exemplo uso GPS no Android
+- [Emulador/API] Activating GPS on the emulator
+http://www.vogella.com/articles/AndroidLocationAPI/article.html#locationapi
+
+- [Emulador] Android Emulator Keyboard Commands
+http://developer.android.com/tools/help/emulator.html
+
+- [Emulador/API] Exemplo uso GPS no Android
 http://luiztools.com/post/Utilizando-o-recurso-de-GPS-em-uma-app-Android.aspx
 
+- [Formula] Calculo distancia
+http://www.sunearthtools.com/pt/tools/distance.php
+
+- [API] Android Compass
+http://stackoverflow.com/questions/4308262/calculate-compass-bearing-heading-to-location-in-android
+http://stackoverflow.com/questions/3514808/how-to-get-android-compass-reading
 http://www.damonkohler.com/2010/06/better-orientation-readings-in-android.html
 
 - Diagramas
 https://www.lucidchart.com
-
-- Calculo distancia
-http://www.sunearthtools.com/pt/tools/distance.php
-
-- Android Compass
-http://stackoverflow.com/questions/3514808/how-to-get-android-compass-reading
-
-- Android Emulator Keyboard Commands
-http://developer.android.com/tools/help/emulator.html

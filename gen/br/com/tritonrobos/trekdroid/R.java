@@ -15,9 +15,9 @@ public final class R {
         public static final int ic_launcher=0x7f020001;
     }
     public static final class id {
+        public static final int btAtivarGPS=0x7f070004;
         public static final int btIniciarTrekking=0x7f070009;
-        public static final int btLocalizar=0x7f070004;
-        public static final int btSalvar=0x7f070005;
+        public static final int btSalvarLocalizacao=0x7f070005;
         public static final int edCoord1=0x7f070006;
         public static final int edCoord2=0x7f070007;
         public static final int edCoord3=0x7f070008;

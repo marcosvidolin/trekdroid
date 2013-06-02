@@ -18,17 +18,23 @@ const unsigned int MOTOR_DIREITO_PIN  = 6;
 //
 // Constantes referentes aos motores.
 const unsigned int VELOCIDADE_MIN = 1;
-const unsigned int VELOCIDADE_MAX = 2;
+const unsigned int VELOCIDADE_MED = 2;
+const unsigned int VELOCIDADE_MAX = 3;
+
 const unsigned int ANGULO_MOTOR_PARADO = 95;
+
 const unsigned int ANGULO_MIN_FRENTE = 110;
-const unsigned int ANGULO_MAX_FRENTE = 120;
+const unsigned int ANGULO_MED_FRENTE = 120;
+const unsigned int ANGULO_MAX_FRENTE = 130;
+
 const unsigned int ANGULO_MIN_RE = 80;
-const unsigned int ANGULO_MAX_RE = 70;
+const unsigned int ANGULO_MED_RE = 70;
+const unsigned int ANGULO_MAX_RE = 60;
 
 //
 // Constantes referentes ao sonar (distancia do cone).
 const unsigned int DISTANCIA_CONE_ENCONTRADO_CM = 20;
-const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 100;
+const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 200;
 
 //
 // Constantes referentes aos commandos recebidos do Android.
@@ -39,13 +45,16 @@ const unsigned char COMANDO_GIRAR_DIREITA  = '3';
 const unsigned char COMANDO_LOCALIZAR_CONE = '4';
 
 //
+// Constantes referentes aos commandos recebidos do Android.
+const unsigned char SERVER_RESP_COMANDO_NAO_EXECUTADO = '0';
+const unsigned char SERVER_RESP_COMANDO_EXECUTADO     = '1';
+
+//
 // Variaveis globais do sistema.
 Servo motorEsq;
 Servo motorDir;
 
 EthernetServer server = EthernetServer(80);
-
-boolean isConeEncontrado = false;
 
 
 /**
@@ -93,9 +102,11 @@ void setupSonar() {
  * @return unsigned int
  */
 unsigned int getAnguloMotoresFrente(unsigned int velocidade) {
-  if (VELOCIDADE_MIN) {
+  if (VELOCIDADE_MIN == velocidade)
     return ANGULO_MIN_FRENTE;
-  }
+  if (VELOCIDADE_MED == velocidade)
+    return ANGULO_MED_FRENTE;
+    
   return ANGULO_MAX_FRENTE;
 }
 
@@ -106,9 +117,11 @@ unsigned int getAnguloMotoresFrente(unsigned int velocidade) {
  * @return unsigned int
  */
 unsigned int getAnguloMotoresRe(unsigned int velocidade) {
-  if (VELOCIDADE_MIN) {
+  if (VELOCIDADE_MIN == velocidade)
     return ANGULO_MIN_RE;
-  }
+  if (VELOCIDADE_MED == velocidade)
+    return ANGULO_MED_RE;
+    
   return ANGULO_MAX_RE;
 }
 
@@ -135,7 +148,7 @@ void moverParaTraz(unsigned int velocidade) {
  * e lado direito para traz.
  */
 void moverParaDireita(unsigned int velocidade) {
-  motorEsq.write(getAnguloMotoresFrente(velocidade));
+  motorEsq.write(getAnguloMotoresFrente(velocidade) + 10);
   motorDir.write(getAnguloMotoresRe(velocidade));
 }
 
@@ -152,7 +165,7 @@ void moverParaEsquerda(unsigned int velocidade) {
  * Rotaciona o robo 360 graus.
  */
 void rotacionar360Graus() {
-  moverParaDireita(VELOCIDADE_MAX);
+  moverParaDireita(VELOCIDADE_MED);
 }
 
 /**
@@ -176,7 +189,8 @@ unsigned long sonarPulsoParaCentimetros(unsigned long pulso) {
  */
 boolean isObjetoDetectadoViaSonar() {
   long pulse;
-  delay(250);
+  //delay(250);
+  delay(150);
   
   //Used to read in the pulse that is being sent by the MaxSonar device.
   //Pulse Width representation with a scale factor of 147 uS per Inch.
@@ -287,24 +301,38 @@ boolean encontrarCone() {
 /**
  * Executa os comandos recebidos do Android.
  */
-void executarComando(unsigned char command) {
+unsigned char executarComando(unsigned char command) {
+  unsigned char resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
+  boolean isConeEncontrado = false;
   switch(command) {
     case COMANDO_PARAR_MOTORES:
       pararMotores(); 
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
     case COMANDO_ANDAR_FRENTE:
-      moverParaFrente(VELOCIDADE_MAX);
+      pararMotores();
+      moverParaFrente(VELOCIDADE_MED);
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
     case COMANDO_GIRAR_ESQUESDA:
-      moverParaEsquerda(VELOCIDADE_MAX);
+      pararMotores();
+      moverParaEsquerda(VELOCIDADE_MED);
+      resp = SERVER_RESP_COMANDO_EXECUTADO;      
       break;
     case COMANDO_GIRAR_DIREITA:
-      moverParaDireita(VELOCIDADE_MAX);
+      pararMotores();
+      moverParaDireita(VELOCIDADE_MED);
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
     case COMANDO_LOCALIZAR_CONE:
-      encontrarCone();
+      pararMotores();
+      while(!isConeEncontrado) {
+        isConeEncontrado = encontrarCone();
+      }
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
   }
+  return resp;
 }
 
 /**
@@ -325,12 +353,13 @@ void initHttpServer() {
         // GET /1        
         if (characters == 6) {
           Serial.println(c);
-          executarComando(c);
+          unsigned char resp = executarComando(c);
 
           // send a standard http response header
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println();
+          client.println(resp);
           break;
         }
         
@@ -357,15 +386,11 @@ void setup() {
  * Loop principal do Robo.
  */
 void loop() {
- initHttpServer();
-}
-
-
-
-
-/*void loop() {
-  if (!isConeEncontrado) {
+  //initHttpServer();
+  /*if (!isConeEncontrado) {
     encontrarCone();
     isConeEncontrado = true;
-  }
-}*/
+  }*/
+  rotacionar360Graus();
+  //moverParaFrente(VELOCIDADE_MAX);
+}

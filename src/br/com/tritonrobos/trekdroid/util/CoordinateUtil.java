@@ -15,6 +15,11 @@ public class CoordinateUtil {
 	// R is earth’s radius (mean radius = 6,371km)
 	private static final double R = 6371; // 6.372,795477598
 
+	// fazer enum recebendo o valor de graus para ser retornado
+	enum Direcao {
+		DIREITA, ESQUERDA;
+	}
+
 	/**
 	 * Obtem a diferenca entre a Latitude das Coordinates de origem e destino.
 	 * 
@@ -129,10 +134,18 @@ public class CoordinateUtil {
 		return grausOrigem - grausDestino;
 	}
 
-	// 0 ou 360 continuar reto
-	// 180 tanto faz o lado
-
-	public static String getRota(final double grausOrigem,
+	/**
+	 * Obtem um enum do tipo Direcao, contendo a direcao (direita/esquerda) e
+	 * quantos graus deve rotacionar para a direcao dada. Obs.: 0 ou 360
+	 * continuar reto, 180 tanto faz o lado.
+	 * 
+	 * @param grausOrigem
+	 *            valor de 0 a 360
+	 * @param grausDestino
+	 *            valor de 0 a 360
+	 * @return
+	 */
+	public static Direcao getRotacao(final double grausOrigem,
 			final double grausDestino) {
 		double esq = CoordinateUtil.getGrausEsquesda(grausOrigem, grausDestino);
 		double dir = CoordinateUtil.getGrausDireita(grausOrigem, grausDestino);
@@ -151,6 +164,12 @@ public class CoordinateUtil {
 		return "Rotacionar " + removeSinal(dir) + " para a direita.";
 	}
 
+	/**
+	 * usar a funcao MOD para remover o sinal e excluir esse metodo do programa.
+	 * 
+	 * @param valor
+	 * @return
+	 */
 	private static double removeSinal(final double valor) {
 		return valor < 0 ? valor * -1 : valor;
 	}

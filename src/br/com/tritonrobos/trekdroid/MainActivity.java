@@ -5,23 +5,18 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import br.com.tritonrobos.trekdroid.http.client.ArduinoHttpClient;
+import br.com.tritonrobos.trekdroid.model.Compass;
 import br.com.tritonrobos.trekdroid.model.Coordinate;
-import br.com.tritonrobos.trekdroid.socket.TCPClient;
 
 /**
  * Activity principal para controle da tela de captura de coordenadas.
@@ -29,7 +24,7 @@ import br.com.tritonrobos.trekdroid.socket.TCPClient;
  * @author vidolin
  * @since 25/04/2013
  */
-public class MainActivity extends Activity implements SensorEventListener {
+public class MainActivity extends Activity {
 
 	private EditText edLatitude;
 	private EditText edLongitude;
@@ -37,29 +32,21 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private EditText edCoord2;
 	private EditText edCoord3;
 
-	private Button btLocalizar;
-	private Button btSalvar;
+	private Button btAtivarGPS;
+	private Button btSalvarLocalizacao;
 	private Button btIniciarTrekking;
 
 	private List<Coordinate> destinos = new ArrayList<Coordinate>();
-	private Coordinate coordenadaCorrente;
+	private Coordinate coordenadaCapturada = new Coordinate();
 
-	private TCPClient mTcpClient;
+	private Coordinate coordenadaCorrente = new Coordinate();
 
-	private SensorManager sensorManager = null;
+	private Compass compass;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
-		sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-		// Register magnetic sensor
-		sensorManager.registerListener(this,
-				sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
-				SensorManager.SENSOR_DELAY_NORMAL);
-
 		setupElements();
 	}
 
@@ -73,38 +60,17 @@ public class MainActivity extends Activity implements SensorEventListener {
 	 * Atualiza a coordenada corrente com os valores de latitude e longitude dos
 	 * campos da tela.
 	 */
-	private Coordinate getCoordenadaCorrente() {
-		coordenadaCorrente = new Coordinate(Double.valueOf(edLatitude.getText()
-				.toString()), Double.valueOf(edLongitude.getText().toString()));
-		return coordenadaCorrente;
+	private Coordinate getCoordenadaCapturada() {
+		coordenadaCapturada.setLatitude(Double.valueOf(edLatitude.getText()
+				.toString()));
+		coordenadaCapturada.setLongitude(Double.valueOf(edLongitude.getText()
+				.toString()));
+		return coordenadaCapturada;
 	}
 
 	/**
-	 * 
-	 * @author vidolin
-	 * 
+	 * Envia o comando para o arduino.
 	 */
-	public class connectTask extends AsyncTask<String, String, TCPClient> {
-		@Override
-		protected TCPClient doInBackground(String... message) {
-			// we create a TCPClient object and
-			mTcpClient = new TCPClient(new TCPClient.OnMessageReceived() {
-				// here the messageReceived method is implemented
-				public void messageReceived(String message) {
-					// this method calls the onProgressUpdate
-					publishProgress(message);
-				}
-			});
-			mTcpClient.run();
-			return null;
-		}
-
-		protected void onProgressUpdate(String... values) {
-			super.onProgressUpdate(values);
-			Log.i("SOCKET", values[0]);
-		}
-	}
-
 	private void converterButtonAction() {
 		new AsyncTask<String, Void, String>() {
 			@Override
@@ -129,38 +95,31 @@ public class MainActivity extends Activity implements SensorEventListener {
 	 * Método usado para importar os elementos da classe R.
 	 */
 	public void setupElements() {
+		
 		edLatitude = (EditText) findViewById(R.id.edLatitude);
 		edLongitude = (EditText) findViewById(R.id.edLongitude);
 		edCoord1 = (EditText) findViewById(R.id.edCoord1);
 		edCoord2 = (EditText) findViewById(R.id.edCoord2);
 		edCoord3 = (EditText) findViewById(R.id.edCoord3);
 
-		btLocalizar = (Button) findViewById(R.id.btLocalizar);
-		btLocalizar.setOnClickListener(new Button.OnClickListener() {
+		btAtivarGPS = (Button) findViewById(R.id.btAtivarGPS);
+		btAtivarGPS.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				startGPS();
+				acionarGPS();
 			}
 		});
 
-		btSalvar = (Button) findViewById(R.id.btSalvar);
-		btSalvar.setOnClickListener(new Button.OnClickListener() {
+		btSalvarLocalizacao = (Button) findViewById(R.id.btSalvarLocalizacao);
+		btSalvarLocalizacao.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				addDestino(getCoordenadaCorrente());
+				addLocalizacaoDestino(getCoordenadaCapturada());
 			}
 		});
-
-		// realiza a conexao com o Arduino (Servidor)
-		new connectTask().execute("");
 
 		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
 		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				// envia a mensagem para o Arduino
-				/*
-				 * if (mTcpClient != null) {
-				 * mTcpClient.sendMessage("Teste Socket Android + Arduino"); }
-				 */
-				converterButtonAction();
+				// TODO: iniciar trekking
 			}
 		});
 	}
@@ -172,7 +131,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 	 * @param destino
 	 *            {@link Coordinate}
 	 */
-	private void addDestino(final Coordinate destino) {
+	private void addLocalizacaoDestino(final Coordinate destino) {
 		this.destinos.add(destino);
 		this.refreshCamposDestino();
 	}
@@ -188,7 +147,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 		if (this.destinos.isEmpty())
 			return;
 
-		Coordinate coord = getCoordenadaCorrente();
+		Coordinate coord = getCoordenadaCapturada();
 
 		String str = coord.getLatitude().toString() + ", "
 				+ coord.getLongitude().toString();
@@ -215,14 +174,15 @@ public class MainActivity extends Activity implements SensorEventListener {
 	/**
 	 * Método que faz a leitura de fato dos valores recebidos do GPS.
 	 */
-	public void startGPS() {
+	public void acionarGPS() {
 
-		LocationManager lManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
 		LocationListener lListener = new LocationListener() {
-			public void onLocationChanged(Location locat) {
-				coordenadaCorrente = new Coordinate(locat);
-				updateInputFieldsView(coordenadaCorrente);
+			public void onLocationChanged(Location location) {
+				coordenadaCapturada.setLocation(location);
+				coordenadaCorrente.setLocation(location);
+				updateCamposCoordenadaCopturada(coordenadaCapturada);
 			}
 
 			public void onStatusChanged(String provider, int status,
@@ -235,49 +195,19 @@ public class MainActivity extends Activity implements SensorEventListener {
 			public void onProviderDisabled(String provider) {
 			}
 		};
-		lManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0,
-				lListener);
-	}
-
-	// Coordenada origem = new Coordenada(-20.67230, -47.07650);
-	// Coordenada destino = new Coordenada(18.5971945, -5.4213818);
-
-	private Location getLocationTest() {
-		Location location = new Location("");
-		location.setLatitude(-20.67194);
-		location.setLongitude(-47.07648);
-		return location;
+		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,
+				0, lListener);
 	}
 
 	/**
-	 * Atualiza os campos editaveis de Latitude/Longitude.
+	 * Atualiza os campos de Latitude/Longitude da coordenada capturada.
 	 * 
 	 * @param destino
 	 *            {@link Coordinate} de distino capturada
 	 */
-	public void updateInputFieldsView(final Coordinate destino) {
-
-		Double latPoint = destino.getLatitude();
-		Double lngPoint = destino.getLongitude();
-
-		edLatitude.setText(latPoint.toString());
-		edLongitude.setText(lngPoint.toString());
+	public void updateCamposCoordenadaCopturada(final Coordinate destino) {
+		edLatitude.setText(destino.getLatitude().toString());
+		edLongitude.setText(destino.getLongitude().toString());
 	}
 
-	public void onAccuracyChanged(Sensor arg0, int arg1) {
-		// TODO Auto-generated method stub
-	}
-
-	public void onSensorChanged(SensorEvent event) {
-		synchronized (this) {
-			if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-				edCoord1.setText(Double
-						.toString((event.values[0] + 360.0) % 360.0));
-				edCoord2.setText(Double
-						.toString((event.values[1] + 360.0) % 360.0));
-				edCoord3.setText(Double
-						.toString((event.values[2] + 360.0) % 360.0));
-			}
-		}
-	}
 }

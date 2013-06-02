@@ -14,6 +14,7 @@ public class Coordinate {
 
 	private Double latitude;
 	private Double longitude;
+	private Location location;
 
 	/**
 	 * Construtor padrao.
@@ -91,6 +92,16 @@ public class Coordinate {
 	}
 
 	/**
+	 * @param location
+	 *            the location to set
+	 */
+	public void setLocation(final Location location) {
+		this.setLatitude(location.getLatitude());
+		this.setLongitude(location.getLongitude());
+		this.location = location;
+	}
+
+	/**
 	 * Obtem a distancia em metros entre a coordenada corrente e a coordenada
 	 * informada por parametro.
 	 * 
@@ -113,6 +124,15 @@ public class Coordinate {
 	 */
 	public Double rolamentoPara(final Coordinate destino) {
 		return CoordinateUtil.getRolamento(this, destino);
+	}
+
+	/**
+	 * Object.toString() Metod.
+	 */
+	@Override
+	public String toString() {
+		return "Coordinate [latitude=" + this.latitude + ", longitude="
+				+ this.longitude + "]";
 	}
 
 }
