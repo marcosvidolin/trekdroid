@@ -7,7 +7,7 @@ void setupMagnetometro() {
 }
 
 /**
- * Obtem os graus de acordo com os eixos x e y do magnetometro.
+ * Obtem os graus de acordo com o eixo x e y do magnetometro.
  */
 float getDegrees(int x, int y) {
   // Calculate heading when the magnetometer is level, then correct for signs of axis.

@@ -7,10 +7,12 @@
 #include <Servo.h>
 #include <SPI.h>
 #include <Ethernet.h>
+#include <HMC.h>
 
 
 //
 // Constantes referentes aos pinos utilizados no Arduino.
+// O magnetometro faz uso dos pinos A4 e A5, para SDA e SCL respectivamente.
 const unsigned int SONAR_PIN          = 2;
 const unsigned int MOTOR_ESQUERDO_PIN = 5;
 const unsigned int MOTOR_DIREITO_PIN  = 6;
@@ -43,11 +45,12 @@ const unsigned char COMANDO_ANDAR_FRENTE   = '1';
 const unsigned char COMANDO_GIRAR_ESQUESDA = '2';
 const unsigned char COMANDO_GIRAR_DIREITA  = '3';
 const unsigned char COMANDO_LOCALIZAR_CONE = '4';
+const unsigned char COMANDO_OBTER_GRAUS    = '5';
 
 //
 // Constantes referentes aos commandos recebidos do Android.
-const unsigned char SERVER_RESP_COMANDO_NAO_EXECUTADO = '0';
-const unsigned char SERVER_RESP_COMANDO_EXECUTADO     = '1';
+const String SERVER_RESP_COMANDO_NAO_EXECUTADO = "0";
+const String SERVER_RESP_COMANDO_EXECUTADO     = "1";
 
 //
 // Variaveis globais do sistema.
@@ -93,6 +96,16 @@ void setupMotores() {
  */
 void setupSonar() {
   pinMode(SONAR_PIN, INPUT);
+}
+
+/**
+ * Configura o magnetometro.
+ * Faz uso dos pinos A4 e A5, para SDA e SCL respectivamente.
+ */
+void setupMagnetometro() {
+  // The HMC5843 needs 5ms before it will communicate
+  delay(5);
+  HMC.init();
 }
 
 /**
@@ -299,10 +312,31 @@ boolean encontrarCone() {
 }
 
 /**
+ * Obtem a posicao do Robo em graus (0-360) em relacao ao norte.
+ */
+float obterPosicaoGrausCorrente() {
+  int x,y,z;
+
+  // There will be new values every 100ms
+  delay(100);
+  HMC.getValues(&x,&y,&z);
+
+  // Calculate heading when the magnetometer is level, then correct for signs of axis.
+  float heading = atan2(y, x);
+   
+  // Correct for when signs are reversed.
+  if(heading < 0)
+    heading += 2 * PI;
+   
+  // Convert radians to degrees for readability.
+  return heading * 180 / M_PI;
+}
+
+/**
  * Executa os comandos recebidos do Android.
  */
-unsigned char executarComando(unsigned char command) {
-  unsigned char resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
+String executarComando(unsigned char command) {
+  String resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
   boolean isConeEncontrado = false;
   switch(command) {
     case COMANDO_PARAR_MOTORES:
@@ -331,6 +365,9 @@ unsigned char executarComando(unsigned char command) {
       }
       resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
+    case COMANDO_OBTER_GRAUS:
+      //resp = obterPosicaoGrausCorrente();
+      break;
   }
   return resp;
 }
@@ -353,13 +390,15 @@ void initHttpServer() {
         // GET /1        
         if (characters == 6) {
           Serial.println(c);
-          unsigned char resp = executarComando(c);
+          String resp = executarComando(c);
 
           // send a standard http response header
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println();
-          client.println(resp);
+          client.print("{\"status\" : " + resp + ", \"graus\": ");
+          client.print(obterPosicaoGrausCorrente());
+          client.print("}");
           break;
         }
         
@@ -379,6 +418,7 @@ void setup() {
   setupEthernet();
   setupMotores();
   setupSonar();
+  setupMagnetometro();
   Serial.begin(9600);
 }
 
