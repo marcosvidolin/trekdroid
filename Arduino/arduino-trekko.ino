@@ -11,11 +11,16 @@
 
 
 //
+// Constantes de direcao
+const unsigned char DIREITA = 'D';
+const unsigned char ESQUERDA = 'E';
+
+//
 // Constantes referentes aos pinos utilizados no Arduino.
 // O magnetometro faz uso dos pinos A4 e A5, para SDA e SCL respectivamente.
 const unsigned int SONAR_PIN          = 2;
-const unsigned int MOTOR_ESQUERDO_PIN = 5;
-const unsigned int MOTOR_DIREITO_PIN  = 6;
+const unsigned int MOTOR_DIREITO_PIN  = 5;
+const unsigned int MOTOR_ESQUERDO_PIN = 6;
 
 //
 // Constantes referentes aos motores.
@@ -26,8 +31,8 @@ const unsigned int VELOCIDADE_MAX = 3;
 const unsigned int ANGULO_MOTOR_PARADO = 95;
 
 const unsigned int ANGULO_MIN_FRENTE = 110;
-const unsigned int ANGULO_MED_FRENTE = 120;
-const unsigned int ANGULO_MAX_FRENTE = 130;
+const unsigned int ANGULO_MED_FRENTE = 115;
+const unsigned int ANGULO_MAX_FRENTE = 120;
 
 const unsigned int ANGULO_MIN_RE = 80;
 const unsigned int ANGULO_MED_RE = 70;
@@ -42,8 +47,8 @@ const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 200;
 // Constantes referentes aos commandos recebidos do Android.
 const unsigned char COMANDO_PARAR_MOTORES  = '0';
 const unsigned char COMANDO_ANDAR_FRENTE   = '1';
-const unsigned char COMANDO_GIRAR_ESQUESDA = '2';
-const unsigned char COMANDO_GIRAR_DIREITA  = '3';
+const unsigned char COMANDO_GIRAR_DIREITA = '2';
+const unsigned char COMANDO_GIRAR_ESQUESDA  = '3';
 const unsigned char COMANDO_LOCALIZAR_CONE = '4';
 const unsigned char COMANDO_OBTER_GRAUS    = '5';
 
@@ -54,11 +59,29 @@ const String SERVER_RESP_COMANDO_EXECUTADO     = "1";
 
 //
 // Variaveis globais do sistema.
-Servo motorEsq;
 Servo motorDir;
+Servo motorEsq;
 
 EthernetServer server = EthernetServer(80);
 
+
+/**
+ * Para os motores do Robo.
+ */
+void pararMotores() {
+  motorDir.write(ANGULO_MOTOR_PARADO);
+  motorEsq.write(ANGULO_MOTOR_PARADO);
+  delay(15);
+}
+
+/**
+ * Configura os motores do Robo.
+ */
+void setupMotores() {
+  motorDir.attach(MOTOR_DIREITO_PIN);
+  motorEsq.attach(MOTOR_ESQUERDO_PIN);
+  pararMotores();
+}
 
 /**
  * Configura a placa Ethernet.
@@ -71,24 +94,6 @@ void setupEthernet() {
   byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
   Ethernet.begin(mac, ip, gateway, subnet);
   server.begin();
-}
-
-/**
- * Para os motores do Robo.
- */
-void pararMotores() {
-  motorEsq.write(ANGULO_MOTOR_PARADO);
-  motorDir.write(ANGULO_MOTOR_PARADO);
-  delay(15);
-}
-
-/**
- * Configura os motores do Robo.
- */
-void setupMotores() {
-  motorEsq.attach(MOTOR_ESQUERDO_PIN);
-  motorDir.attach(MOTOR_DIREITO_PIN);
-  pararMotores();
 }
 
 /**
@@ -143,8 +148,8 @@ unsigned int getAnguloMotoresRe(unsigned int velocidade) {
  */
 void moverParaFrente(unsigned int velocidade) {
   unsigned int angulo = getAnguloMotoresFrente(velocidade);
-  motorEsq.write(angulo);
   motorDir.write(angulo);
+  motorEsq.write(angulo);
 }
 
 /**
@@ -152,33 +157,35 @@ void moverParaFrente(unsigned int velocidade) {
  */
 void moverParaTraz(unsigned int velocidade) {
   unsigned int angulo = getAnguloMotoresRe(velocidade);
-  motorEsq.write(angulo);
   motorDir.write(angulo);
+  motorEsq.write(angulo);
 }
 
 /**
  * Move o Robo para Direita. Lado esquerdo para frente
  * e lado direito para traz.
  */
-void moverParaDireita(unsigned int velocidade) {
-  motorEsq.write(getAnguloMotoresFrente(velocidade) + 10);
-  motorDir.write(getAnguloMotoresRe(velocidade));
+void moverParaEsquerda(unsigned int velocidade) {
+  motorDir.write(getAnguloMotoresFrente(velocidade));
+  motorEsq.write(getAnguloMotoresRe(velocidade));
 }
 
 /**
  * Move o Robo para Esquerda. Lado esquerdo para frente
  * e lado direito para traz.
  */
-void moverParaEsquerda(unsigned int velocidade) {
-  motorEsq.write(getAnguloMotoresRe(velocidade));
-  motorDir.write(getAnguloMotoresFrente(velocidade));
+void moverParaDireita(unsigned int velocidade) {
+  motorDir.write(getAnguloMotoresRe(velocidade));
+  motorEsq.write(getAnguloMotoresFrente(velocidade));
 }
 
 /**
  * Rotaciona o robo 360 graus.
  */
 void rotacionar360Graus() {
-  moverParaDireita(VELOCIDADE_MED);
+    // velocidade especifica, rotaciona para a direita
+    motorDir.write(112);
+    motorEsq.write(78);
 }
 
 /**
@@ -189,7 +196,7 @@ void rotacionar360Graus() {
  * disparo do pulso ate atingir um objeto e volta. Entao divide-se a distancia
  * total por 2 para obter a distancia entre sensor e o objeto.
  *
- * @return 
+ * @return unsigned long
  */
 unsigned long sonarPulsoParaCentimetros(unsigned long pulso) {
   return pulso / 29 / 2;
@@ -271,7 +278,7 @@ boolean moverDirecaoCone() {
     return true;
   }
   
-  moverParaFrente(VELOCIDADE_MAX);
+  moverParaFrente(VELOCIDADE_MED);
   while (true) {
     // proximo o bastante
     if (getDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
@@ -313,6 +320,8 @@ boolean encontrarCone() {
 
 /**
  * Obtem a posicao do Robo em graus (0-360) em relacao ao norte.
+ *
+ * @return float
  */
 float obterPosicaoGrausCorrente() {
   int x,y,z;
@@ -333,7 +342,34 @@ float obterPosicaoGrausCorrente() {
 }
 
 /**
+ * Rotaciona o Robo para uma determinada direcao de forma continua,
+ * ate que o Robo atinja o grau informado.
+ *
+ * @param graus - grau destino
+ * @param direcao - direcao no qual o Robo ira rotacionar para atingir o grau destino
+ */
+void rotacionarPara(float graus, unsigned char direcao) {
+  unsigned int tolerancia = 2;
+  
+  pararMotores();
+  if (direcao == DIREITA)
+    moverParaDireita(VELOCIDADE_MIN);
+  else
+    moverParaEsquerda(VELOCIDADE_MIN);
+
+  while(true) {
+    unsigned int diff = graus - obterPosicaoGrausCorrente();
+    if (diff < tolerancia) {
+      pararMotores();
+      break;
+    }
+  }
+}
+
+/**
  * Executa os comandos recebidos do Android.
+ *
+ * @param command - comando a ser executado pelo Robo
  */
 String executarComando(unsigned char command) {
   String resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
@@ -348,14 +384,14 @@ String executarComando(unsigned char command) {
       moverParaFrente(VELOCIDADE_MED);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
-    case COMANDO_GIRAR_ESQUESDA:
-      pararMotores();
-      moverParaEsquerda(VELOCIDADE_MED);
-      resp = SERVER_RESP_COMANDO_EXECUTADO;      
-      break;
     case COMANDO_GIRAR_DIREITA:
       pararMotores();
       moverParaDireita(VELOCIDADE_MED);
+      resp = SERVER_RESP_COMANDO_EXECUTADO;      
+      break;
+    case COMANDO_GIRAR_ESQUESDA:
+      pararMotores();
+      moverParaEsquerda(VELOCIDADE_MED);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
     case COMANDO_LOCALIZAR_CONE:
@@ -423,14 +459,30 @@ void setup() {
 }
 
 /**
+ * Funcao executada apenas uma vez na inicializacao.
+ * Aguarda (delay) em segundos antes de iniciar o trekking.
+ * 
+ * @param sec segundos para ser aguardado para inicializar o trekking
+ */
+boolean isStarted = false;
+void aguardePrimeiraVez(unsigned int sec) {
+  if (!isStarted) {
+    delay(sec * 1000);
+    isStarted = true;
+  }
+}
+
+
+/**
  * Loop principal do Robo.
  */
+boolean isConeEncontrado = false;
 void loop() {
+  aguardePrimeiraVez(5);
   //initHttpServer();
-  /*if (!isConeEncontrado) {
-    encontrarCone();
+  if (!isConeEncontrado) {
+    //encontrarCone();
+    rotacionarPara(200, DIREITA);
     isConeEncontrado = true;
-  }*/
-  rotacionar360Graus();
-  //moverParaFrente(VELOCIDADE_MAX);
+  }
 }

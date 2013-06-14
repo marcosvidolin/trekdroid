@@ -5,17 +5,15 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import br.com.tritonrobos.trekdroid.http.client.ArduinoHttpClient;
-import br.com.tritonrobos.trekdroid.model.Compass;
 import br.com.tritonrobos.trekdroid.model.Coordinate;
 
 /**
@@ -37,11 +35,9 @@ public class MainActivity extends Activity {
 	private Button btIniciarTrekking;
 
 	private List<Coordinate> destinos = new ArrayList<Coordinate>();
+
 	private Coordinate coordenadaCapturada = new Coordinate();
-
 	private Coordinate coordenadaCorrente = new Coordinate();
-
-	private Compass compass;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -60,6 +56,7 @@ public class MainActivity extends Activity {
 	 * Atualiza a coordenada corrente com os valores de latitude e longitude dos
 	 * campos da tela.
 	 */
+
 	private Coordinate getCoordenadaCapturada() {
 		coordenadaCapturada.setLatitude(Double.valueOf(edLatitude.getText()
 				.toString()));
@@ -69,33 +66,10 @@ public class MainActivity extends Activity {
 	}
 
 	/**
-	 * Envia o comando para o arduino.
-	 */
-	private void converterButtonAction() {
-		new AsyncTask<String, Void, String>() {
-			@Override
-			protected String doInBackground(String... params) {
-				return ArduinoHttpClient.sendCommand("1");
-			}
-
-			@Override
-			protected void onPostExecute(String result) {
-				System.out.println(result);
-			}
-
-			@Override
-			protected void onPreExecute() {
-
-			}
-
-		}.execute(new String[] {});
-	}
-
-	/**
 	 * Método usado para importar os elementos da classe R.
 	 */
-	public void setupElements() {
-		
+	private void setupElements() {
+
 		edLatitude = (EditText) findViewById(R.id.edLatitude);
 		edLongitude = (EditText) findViewById(R.id.edLongitude);
 		edCoord1 = (EditText) findViewById(R.id.edCoord1);
@@ -119,7 +93,7 @@ public class MainActivity extends Activity {
 		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
 		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				// TODO: iniciar trekking
+				startService(new Intent("TREKKING_SERVICE"));
 			}
 		});
 	}
@@ -174,7 +148,7 @@ public class MainActivity extends Activity {
 	/**
 	 * Método que faz a leitura de fato dos valores recebidos do GPS.
 	 */
-	public void acionarGPS() {
+	private void acionarGPS() {
 
 		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -205,7 +179,7 @@ public class MainActivity extends Activity {
 	 * @param destino
 	 *            {@link Coordinate} de distino capturada
 	 */
-	public void updateCamposCoordenadaCopturada(final Coordinate destino) {
+	private void updateCamposCoordenadaCopturada(final Coordinate destino) {
 		edLatitude.setText(destino.getLatitude().toString());
 		edLongitude.setText(destino.getLongitude().toString());
 	}

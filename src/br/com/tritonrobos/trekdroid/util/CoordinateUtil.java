@@ -150,7 +150,7 @@ public class CoordinateUtil {
 		double esq = CoordinateUtil.getGrausEsquesda(grausOrigem, grausDestino);
 		double dir = CoordinateUtil.getGrausDireita(grausOrigem, grausDestino);
 
-		if (removeSinal(esq) > 180 && removeSinal(dir) > 180) {
+		/*if (removeSinal(esq) > 180 && removeSinal(dir) > 180) {
 			if (esq > dir) {
 				return "Rotacionar " + (360 - esq) + " para a esquerda.";
 			}
@@ -161,7 +161,8 @@ public class CoordinateUtil {
 			return "Rotacionar " + removeSinal(esq) + " para a esquerda.";
 		}
 
-		return "Rotacionar " + removeSinal(dir) + " para a direita.";
+		return "Rotacionar " + removeSinal(dir) + " para a direita.";*/
+		return null;
 	}
 
 	/**
