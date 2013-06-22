@@ -14,7 +14,7 @@ import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import br.com.tritonrobos.trekdroid.model.Coordinate;
+import br.com.tritonrobos.trekdroid.model.Coordenada;
 
 /**
  * Activity principal para controle da tela de captura de coordenadas.
@@ -34,10 +34,10 @@ public class MainActivity extends Activity {
 	private Button btSalvarLocalizacao;
 	private Button btIniciarTrekking;
 
-	private List<Coordinate> destinos = new ArrayList<Coordinate>();
+	private List<Coordenada> destinos = new ArrayList<Coordenada>();
 
-	private Coordinate coordenadaCapturada = new Coordinate();
-	private Coordinate coordenadaCorrente = new Coordinate();
+	private Coordenada coordenadaCapturada;
+	private Coordenada coordenadaCorrente = new Coordenada();
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -57,7 +57,8 @@ public class MainActivity extends Activity {
 	 * campos da tela.
 	 */
 
-	private Coordinate getCoordenadaCapturada() {
+	private Coordenada getCoordenadaCapturada() {
+		coordenadaCapturada = new Coordenada();
 		coordenadaCapturada.setLatitude(Double.valueOf(edLatitude.getText()
 				.toString()));
 		coordenadaCapturada.setLongitude(Double.valueOf(edLongitude.getText()
@@ -93,7 +94,11 @@ public class MainActivity extends Activity {
 		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
 		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				startService(new Intent("TREKKING_SERVICE"));
+				Intent i = new Intent("TREKKING_SERVICE");
+				i.putExtra("d1", destinos.get(0).toArry());
+				i.putExtra("d2", destinos.get(1).toArry());
+				i.putExtra("d3", destinos.get(2).toArry());
+				startService(i);
 			}
 		});
 	}
@@ -103,9 +108,9 @@ public class MainActivity extends Activity {
 	 * Robo.
 	 * 
 	 * @param destino
-	 *            {@link Coordinate}
+	 *            {@link Coordenada}
 	 */
-	private void addLocalizacaoDestino(final Coordinate destino) {
+	private void addLocalizacaoDestino(final Coordenada destino) {
 		this.destinos.add(destino);
 		this.refreshCamposDestino();
 	}
@@ -115,13 +120,13 @@ public class MainActivity extends Activity {
 	 * por parametro.
 	 * 
 	 * @param destino
-	 *            the {@link Coordinate}
+	 *            the {@link Coordenada}
 	 */
 	private void refreshCamposDestino() {
 		if (this.destinos.isEmpty())
 			return;
 
-		Coordinate coord = getCoordenadaCapturada();
+		Coordenada coord = getCoordenadaCapturada();
 
 		String str = coord.getLatitude().toString() + ", "
 				+ coord.getLongitude().toString();
@@ -154,7 +159,7 @@ public class MainActivity extends Activity {
 
 		LocationListener lListener = new LocationListener() {
 			public void onLocationChanged(Location location) {
-				coordenadaCapturada.setLocation(location);
+				coordenadaCapturada = new Coordenada(location);
 				coordenadaCorrente.setLocation(location);
 				updateCamposCoordenadaCopturada(coordenadaCapturada);
 			}
@@ -177,9 +182,9 @@ public class MainActivity extends Activity {
 	 * Atualiza os campos de Latitude/Longitude da coordenada capturada.
 	 * 
 	 * @param destino
-	 *            {@link Coordinate} de distino capturada
+	 *            {@link Coordenada} de distino capturada
 	 */
-	private void updateCamposCoordenadaCopturada(final Coordinate destino) {
+	private void updateCamposCoordenadaCopturada(final Coordenada destino) {
 		edLatitude.setText(destino.getLatitude().toString());
 		edLongitude.setText(destino.getLongitude().toString());
 	}

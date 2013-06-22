@@ -10,7 +10,13 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 
+import br.com.tritonrobos.trekdroid.model.ComandoArduino;
+import br.com.tritonrobos.trekdroid.model.ComandoArduino.Comando;
+import br.com.tritonrobos.trekdroid.model.ComandoArduino.Velocidade;
+
 /**
+ * Cliente HTTP do Arduino, responsavel por se comunicar com o Robo atraves de
+ * comandos.
  * 
  * @author vidolin
  * @sinze 25/05/2013
@@ -40,7 +46,7 @@ public class ArduinoHttpClient {
 	 *            {@link String}
 	 * @return {@link String} response
 	 */
-	public static String sendCommand(final String command) {
+	private String sendCommand(final String command) {
 		String responseString = null;
 		try {
 			HttpGet get = new HttpGet(getEndereco(command));
@@ -52,9 +58,96 @@ public class ArduinoHttpClient {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
 		return responseString;
+	}
+
+	/**
+	 * Envia um comando para que os motores do robo sejam parados.
+	 */
+	public void pararMotores() {
+		ComandoArduino comando = new ComandoArduino.Builder().comando(
+				Comando.PARAR_MOTORES).build();
+		this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
+	 * Envia um comando ao Robo para realizar movimento para frente.
+	 * 
+	 * @param velocidade
+	 *            {@link Velocidade}
+	 */
+	public void moverParaFrente(final Velocidade velocidade) {
+		ComandoArduino comando = new ComandoArduino.Builder()
+				.comando(Comando.ANDAR_FRENTE).velocidade(velocidade).build();
+		this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
+	 * Envia um comando ao Robo para realizar movimento para traz.
+	 * 
+	 * @param velocidade
+	 *            {@link Velocidade}
+	 */
+	public void moverParaTraz(final Velocidade velocidade) {
+		ComandoArduino comando = new ComandoArduino.Builder()
+				.comando(Comando.ANDAR_TRAZ).velocidade(velocidade).build();
+		this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
+	 * Envia um comando para o Robo rotacionar para a direita na velocidade
+	 * informada.
+	 * 
+	 * @param velocidade
+	 *            {@link Velocidade}
+	 */
+	public void rotacionarParaDireita(final Velocidade velocidade) {
+		ComandoArduino comando = new ComandoArduino.Builder()
+				.comando(Comando.GIRAR_DIREITA).velocidade(velocidade).build();
+		this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
+	 * Envia um comando para o Robo rotacionar para a esquerda na velocidade
+	 * informada.
+	 * 
+	 * @param velocidade
+	 *            {@link Velocidade}
+	 */
+	public void rotacionarParaEsquerda(final Velocidade velocidade) {
+		ComandoArduino comando = new ComandoArduino.Builder()
+				.comando(Comando.GIRAR_ESQUESDA).velocidade(velocidade).build();
+		this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
+	 * Envia um comando para o Arduino localizar o cone. Retorna true caso tenha
+	 * encontrado o cone.
+	 * 
+	 * @return boolean
+	 */
+	public boolean localizarCone() {
+		ComandoArduino comando = new ComandoArduino.Builder().comando(
+				Comando.LOCALIZAR_CONE).build();
+		this.sendCommand(comando.getComandoComoTexto());
+
+		// TODO: tratar retorno da requisicao para saber se o cone foi
+		// encontrado
+		return true;
+	}
+
+	/**
+	 * Envia um comando para o Rovo se alinhar de acordo com o grau informado.
+	 */
+	public void rotacionarPara(final Double graus) {
+		ComandoArduino comando = new ComandoArduino.Builder()
+				.comando(Comando.ROTACIONAR_PARA).valor(graus.toString())
+				.build();
+		this.sendCommand(comando.getComandoComoTexto());
 	}
 
 }

@@ -1,6 +1,6 @@
 package br.com.tritonrobos.trekdroid.util;
 
-import br.com.tritonrobos.trekdroid.model.Coordinate;
+import br.com.tritonrobos.trekdroid.model.Coordenada;
 
 public class LocationUtil {
 
@@ -16,8 +16,8 @@ public class LocationUtil {
 	 *            Coordinate de destino
 	 * @return double
 	 */
-	private static double getDiffLatitude(final Coordinate origem,
-			final Coordinate destino) {
+	private static double getDiffLatitude(final Coordenada origem,
+			final Coordenada destino) {
 		return Math.toRadians(destino.getLatitude())
 				- Math.toRadians(origem.getLatitude());
 	}
@@ -31,14 +31,14 @@ public class LocationUtil {
 	 *            Coordinate de destino
 	 * @return double
 	 */
-	private static double getDiffLongitude(final Coordinate origem,
-			final Coordinate destino) {
+	private static double getDiffLongitude(final Coordenada origem,
+			final Coordenada destino) {
 		return Math.toRadians(destino.getLongitude())
 				- Math.toRadians(origem.getLongitude());
 	}
 
 	/**
-	 * Obtem a distancia em metros entre duas {@link Coordinate}s.
+	 * Obtem a distancia em metros entre duas {@link Coordenada}s.
 	 * 
 	 * @param origem
 	 *            Coordinate origem
@@ -46,8 +46,8 @@ public class LocationUtil {
 	 *            Coordinate destino
 	 * @return double
 	 */
-	public static double getDistanciaEmMetros(final Coordinate origem,
-			final Coordinate destino) {
+	public static double getDistanciaEmMetros(final Coordenada origem,
+			final Coordenada destino) {
 
 		double dLat = LocationUtil.getDiffLatitude(origem, destino);
 		double dLon = LocationUtil.getDiffLongitude(origem, destino);
@@ -72,8 +72,8 @@ public class LocationUtil {
 	 *            Coordinate destino
 	 * @return double
 	 */
-	public static double getDirecao(final Coordinate origem,
-			final Coordinate destino) {
+	public static double getDirecao(final Coordenada origem,
+			final Coordenada destino) {
 
 		double dPhi = Math.log(Math.tan(Math.toRadians(destino.getLatitude())
 				/ 2 + Math.PI / 4)

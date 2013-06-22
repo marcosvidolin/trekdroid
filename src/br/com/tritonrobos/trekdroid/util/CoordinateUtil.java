@@ -1,6 +1,6 @@
 package br.com.tritonrobos.trekdroid.util;
 
-import br.com.tritonrobos.trekdroid.model.Coordinate;
+import br.com.tritonrobos.trekdroid.model.Coordenada;
 
 /**
  * Classe utilitaria para realizar calculos diversos sobre coordenadas
@@ -29,8 +29,8 @@ public class CoordinateUtil {
 	 *            Coordinate de destino
 	 * @return double
 	 */
-	private static double getDiffLatitude(final Coordinate origem,
-			final Coordinate destino) {
+	private static double getDiffLatitude(final Coordenada origem,
+			final Coordenada destino) {
 		return Math.toRadians(destino.getLatitude())
 				- Math.toRadians(origem.getLatitude());
 	}
@@ -44,14 +44,14 @@ public class CoordinateUtil {
 	 *            Coordinate de destino
 	 * @return double
 	 */
-	private static double getDiffLongitude(final Coordinate origem,
-			final Coordinate destino) {
+	private static double getDiffLongitude(final Coordenada origem,
+			final Coordenada destino) {
 		return Math.toRadians(destino.getLongitude())
 				- Math.toRadians(origem.getLongitude());
 	}
 
 	/**
-	 * Obtem a distancia em metros entre duas {@link Coordinate}s.
+	 * Obtem a distancia em metros entre duas {@link Coordenada}s.
 	 * 
 	 * @param origem
 	 *            Coordinate origem
@@ -59,8 +59,8 @@ public class CoordinateUtil {
 	 *            Coordinate destino
 	 * @return double
 	 */
-	public static double getDistancia(final Coordinate origem,
-			final Coordinate destino) {
+	public static double getDistancia(final Coordenada origem,
+			final Coordenada destino) {
 
 		double dLat = CoordinateUtil.getDiffLatitude(origem, destino);
 		double dLon = CoordinateUtil.getDiffLongitude(origem, destino);
@@ -86,8 +86,8 @@ public class CoordinateUtil {
 	 *            Coordinate destino
 	 * @return double
 	 */
-	public static double getRolamento(final Coordinate origem,
-			final Coordinate destino) {
+	public static double getRolamento(final Coordenada origem,
+			final Coordenada destino) {
 
 		double dPhi = Math.log(Math.tan(Math.toRadians(destino.getLatitude())
 				/ 2 + Math.PI / 4)

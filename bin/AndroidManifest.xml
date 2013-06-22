@@ -20,7 +20,7 @@
         
         <!-- Activity Principal -->
         <activity
-            android:name=".MainActivity"
+            android:name=".MainActivity2"
             android:label="@string/title_activity_main" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

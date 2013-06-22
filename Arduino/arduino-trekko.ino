@@ -24,9 +24,9 @@ const unsigned int MOTOR_ESQUERDO_PIN = 6;
 
 //
 // Constantes referentes aos motores.
-const unsigned int VELOCIDADE_MIN = 1;
-const unsigned int VELOCIDADE_MED = 2;
-const unsigned int VELOCIDADE_MAX = 3;
+const char VELOCIDADE_MIN = '1';
+const char VELOCIDADE_MED = '2';
+const char VELOCIDADE_MAX = '3';
 
 const unsigned int ANGULO_MOTOR_PARADO = 95;
 
@@ -45,12 +45,14 @@ const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 200;
 
 //
 // Constantes referentes aos commandos recebidos do Android.
-const unsigned char COMANDO_PARAR_MOTORES  = '0';
-const unsigned char COMANDO_ANDAR_FRENTE   = '1';
-const unsigned char COMANDO_GIRAR_DIREITA = '2';
-const unsigned char COMANDO_GIRAR_ESQUESDA  = '3';
-const unsigned char COMANDO_LOCALIZAR_CONE = '4';
-const unsigned char COMANDO_OBTER_GRAUS    = '5';
+const char COMANDO_PARAR_MOTORES   = '0';
+const char COMANDO_ANDAR_FRENTE    = '1';
+const char COMANDO_ANDAR_TRAZ      = '2';
+const char COMANDO_GIRAR_DIREITA   = '3';
+const char COMANDO_GIRAR_ESQUESDA  = '4';
+const char COMANDO_LOCALIZAR_CONE  = '5';
+const char COMANDO_OBTER_GRAUS     = '6';
+const char COMANDO_ROTACIONAR_PARA = '7';
 
 //
 // Constantes referentes aos commandos recebidos do Android.
@@ -119,7 +121,7 @@ void setupMagnetometro() {
  *
  * @return unsigned int
  */
-unsigned int getAnguloMotoresFrente(unsigned int velocidade) {
+unsigned int getAnguloMotoresFrente(char velocidade) {
   if (VELOCIDADE_MIN == velocidade)
     return ANGULO_MIN_FRENTE;
   if (VELOCIDADE_MED == velocidade)
@@ -134,7 +136,7 @@ unsigned int getAnguloMotoresFrente(unsigned int velocidade) {
  *
  * @return unsigned int
  */
-unsigned int getAnguloMotoresRe(unsigned int velocidade) {
+unsigned int getAnguloMotoresRe(char velocidade) {
   if (VELOCIDADE_MIN == velocidade)
     return ANGULO_MIN_RE;
   if (VELOCIDADE_MED == velocidade)
@@ -146,7 +148,7 @@ unsigned int getAnguloMotoresRe(unsigned int velocidade) {
 /**
  * Move o Robo para frente.
  */
-void moverParaFrente(unsigned int velocidade) {
+void moverParaFrente(char velocidade) {
   unsigned int angulo = getAnguloMotoresFrente(velocidade);
   motorDir.write(angulo);
   motorEsq.write(angulo);
@@ -155,7 +157,7 @@ void moverParaFrente(unsigned int velocidade) {
 /**
  * Move o Robo para frente.
  */
-void moverParaTraz(unsigned int velocidade) {
+void moverParaTraz(char velocidade) {
   unsigned int angulo = getAnguloMotoresRe(velocidade);
   motorDir.write(angulo);
   motorEsq.write(angulo);
@@ -165,7 +167,7 @@ void moverParaTraz(unsigned int velocidade) {
  * Move o Robo para Direita. Lado esquerdo para frente
  * e lado direito para traz.
  */
-void moverParaEsquerda(unsigned int velocidade) {
+void moverParaEsquerda(char velocidade) {
   motorDir.write(getAnguloMotoresFrente(velocidade));
   motorEsq.write(getAnguloMotoresRe(velocidade));
 }
@@ -174,7 +176,7 @@ void moverParaEsquerda(unsigned int velocidade) {
  * Move o Robo para Esquerda. Lado esquerdo para frente
  * e lado direito para traz.
  */
-void moverParaDireita(unsigned int velocidade) {
+void moverParaDireita(char velocidade) {
   motorDir.write(getAnguloMotoresRe(velocidade));
   motorEsq.write(getAnguloMotoresFrente(velocidade));
 }
@@ -371,40 +373,66 @@ void rotacionarPara(float graus, unsigned char direcao) {
  *
  * @param command - comando a ser executado pelo Robo
  */
-String executarComando(unsigned char command) {
+String executarComando(char command, String value, char velocidade) {
   String resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
   boolean isConeEncontrado = false;
+  
   switch(command) {
+    
     case COMANDO_PARAR_MOTORES:
       pararMotores(); 
       resp = SERVER_RESP_COMANDO_EXECUTADO;
+      Serial.println("COMANDO_PARAR_MOTORES ");
       break;
+
     case COMANDO_ANDAR_FRENTE:
       pararMotores();
-      moverParaFrente(VELOCIDADE_MED);
+      moverParaFrente(velocidade);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
+      Serial.println("COMANDO_ANDAR_FRENTE ");
       break;
+
+    case COMANDO_ANDAR_TRAZ:
+      pararMotores();
+      moverParaTraz(velocidade);
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
+      Serial.println("COMANDO_ANDAR_TRAZ ");
+      break;
+
     case COMANDO_GIRAR_DIREITA:
       pararMotores();
-      moverParaDireita(VELOCIDADE_MED);
-      resp = SERVER_RESP_COMANDO_EXECUTADO;      
+      moverParaDireita(velocidade);
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
+      Serial.println("COMANDO_GIRAR_DIREITA ");
       break;
+
     case COMANDO_GIRAR_ESQUESDA:
       pararMotores();
-      moverParaEsquerda(VELOCIDADE_MED);
+      moverParaEsquerda(velocidade);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
+      Serial.println("COMANDO_GIRAR_ESQUERDA ");
       break;
+
     case COMANDO_LOCALIZAR_CONE:
       pararMotores();
       while(!isConeEncontrado) {
         isConeEncontrado = encontrarCone();
       }
       resp = SERVER_RESP_COMANDO_EXECUTADO;
+      Serial.println("COMANDO_LOCALIZAR_CONE ");
       break;
+
     case COMANDO_OBTER_GRAUS:
       //resp = obterPosicaoGrausCorrente();
       break;
   }
+  
+  
+  Serial.print(value);
+  Serial.print(" ");
+  Serial.print(velocidade);
+  
+  
   return resp;
 }
 
@@ -415,19 +443,29 @@ void initHttpServer() {
   // listen for incoming clients
   EthernetClient client = server.available();
   unsigned int characters = 0;
+  String value = "";
+  char command;
   if (client) {
     while (client.connected()) {
       if (client.available()) {
 
         char c = client.read();
         ++characters;
-               
+
         // 123456789
         // GET /1        
         if (characters == 6) {
-          Serial.println(c);
-          String resp = executarComando(c);
-
+          command = c;
+        } else if (characters > 6 && characters < 10) {
+          value += c;
+        } else if (characters == 10) {
+          
+          String resp = executarComando(command, value, c);
+          
+          //
+          // delay de dez segundos
+          //delay(10*1000);
+                    
           // send a standard http response header
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
@@ -435,6 +473,12 @@ void initHttpServer() {
           client.print("{\"status\" : " + resp + ", \"graus\": ");
           client.print(obterPosicaoGrausCorrente());
           client.print("}");
+          
+          /*client.print(command);
+          client.print(" ");
+          client.print(value);
+          client.print(" ");
+          client.print(c);*/
           break;
         }
         
@@ -445,17 +489,6 @@ void initHttpServer() {
     // close the connection:
     client.stop();
   }
-}
-
-/**
- * Configuracao geral do Robo.
- */
-void setup() {
-  setupEthernet();
-  setupMotores();
-  setupSonar();
-  setupMagnetometro();
-  Serial.begin(9600);
 }
 
 /**
@@ -472,17 +505,27 @@ void aguardePrimeiraVez(unsigned int sec) {
   }
 }
 
+/**
+ * Configuracao geral do Robo.
+ */
+void setup() {
+  setupEthernet();
+  setupMotores();
+  setupSonar();
+  setupMagnetometro();
+  Serial.begin(9600);
+}
 
 /**
  * Loop principal do Robo.
  */
 boolean isConeEncontrado = false;
 void loop() {
-  aguardePrimeiraVez(5);
-  //initHttpServer();
-  if (!isConeEncontrado) {
+  //aguardePrimeiraVez(5);
+  initHttpServer();
+  /*if (!isConeEncontrado) {
     //encontrarCone();
     rotacionarPara(200, DIREITA);
     isConeEncontrado = true;
-  }
+  }*/
 }
