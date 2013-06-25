@@ -1,4 +1,4 @@
-/**
+ /**
  * Programa usado no Arduino UNO para controle do Robo de Trekking.
  * @author Marcos Vidolin
  * @since 04/05/2013
@@ -12,15 +12,16 @@
 
 //
 // Constantes de direcao
-const unsigned char DIREITA = 'D';
-const unsigned char ESQUERDA = 'E';
+const unsigned int DIREITA  = 1;
+const unsigned int ESQUERDA = 2;
 
 //
 // Constantes referentes aos pinos utilizados no Arduino.
 // O magnetometro faz uso dos pinos A4 e A5, para SDA e SCL respectivamente.
-const unsigned int SONAR_PIN          = 2;
-const unsigned int MOTOR_DIREITO_PIN  = 5;
-const unsigned int MOTOR_ESQUERDO_PIN = 6;
+const unsigned int PIN_SONAR           = 2;
+const unsigned int PIN_MOTOR_DIREITO   = 5;
+const unsigned int PIN_MOTOR_ESQUERDO  = 6;
+const unsigned int PIN_SINALIZADOR_LED = A0;
 
 //
 // Constantes referentes aos motores.
@@ -41,7 +42,7 @@ const unsigned int ANGULO_MAX_RE = 60;
 //
 // Constantes referentes ao sonar (distancia do cone).
 const unsigned int DISTANCIA_CONE_ENCONTRADO_CM = 20;
-const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 200;
+const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 400;
 
 //
 // Constantes referentes aos commandos recebidos do Android.
@@ -58,6 +59,18 @@ const char COMANDO_ROTACIONAR_PARA = '7';
 // Constantes referentes aos commandos recebidos do Android.
 const String SERVER_RESP_COMANDO_NAO_EXECUTADO = "0";
 const String SERVER_RESP_COMANDO_EXECUTADO     = "1";
+
+//
+// Constantes referentes aos quadrantes.
+const unsigned int QUADRANTE_1_INDICE = 1;
+const unsigned int QUADRANTE_2_INDICE = 2;
+const unsigned int QUADRANTE_3_INDICE = 3;
+const unsigned int QUADRANTE_4_INDICE = 4;
+
+const unsigned int QUADRANTE_1_GRAU_INICIO = 0;
+const unsigned int QUADRANTE_2_GRAU_INICIO = 90;
+const unsigned int QUADRANTE_3_GRAU_INICIO = 180;
+const unsigned int QUADRANTE_4_GRAU_INICIO = 270;
 
 //
 // Variaveis globais do sistema.
@@ -80,8 +93,8 @@ void pararMotores() {
  * Configura os motores do Robo.
  */
 void setupMotores() {
-  motorDir.attach(MOTOR_DIREITO_PIN);
-  motorEsq.attach(MOTOR_ESQUERDO_PIN);
+  motorDir.attach(PIN_MOTOR_DIREITO);
+  motorEsq.attach(PIN_MOTOR_ESQUERDO);
   pararMotores();
 }
 
@@ -102,7 +115,7 @@ void setupEthernet() {
  * Configura o sonar.
  */
 void setupSonar() {
-  pinMode(SONAR_PIN, INPUT);
+  pinMode(PIN_SONAR, INPUT);
 }
 
 /**
@@ -116,12 +129,19 @@ void setupMagnetometro() {
 }
 
 /**
+ * Configura o LED sinalizador.
+ */
+void setupSinalizadorLED() {
+  pinMode(PIN_SINALIZADOR_LED, OUTPUT);
+}
+
+/**
  * Obtem o angulo dos motores de acordo com a 
  * velocidade passada por parametro.
  *
- * @return unsigned int
+ * @return int
  */
-unsigned int getAnguloMotoresFrente(char velocidade) {
+int getAnguloMotoresFrente(char velocidade) {
   if (VELOCIDADE_MIN == velocidade)
     return ANGULO_MIN_FRENTE;
   if (VELOCIDADE_MED == velocidade)
@@ -149,7 +169,7 @@ unsigned int getAnguloMotoresRe(char velocidade) {
  * Move o Robo para frente.
  */
 void moverParaFrente(char velocidade) {
-  unsigned int angulo = getAnguloMotoresFrente(velocidade);
+  int angulo = getAnguloMotoresFrente(velocidade);
   motorDir.write(angulo);
   motorEsq.write(angulo);
 }
@@ -198,9 +218,9 @@ void rotacionar360Graus() {
  * disparo do pulso ate atingir um objeto e volta. Entao divide-se a distancia
  * total por 2 para obter a distancia entre sensor e o objeto.
  *
- * @return unsigned long
+ * @return long
  */
-unsigned long sonarPulsoParaCentimetros(unsigned long pulso) {
+long sonarPulsoParaCentimetros(long pulso) {
   return pulso / 29 / 2;
 }
 
@@ -216,7 +236,7 @@ boolean isObjetoDetectadoViaSonar() {
   
   //Used to read in the pulse that is being sent by the MaxSonar device.
   //Pulse Width representation with a scale factor of 147 uS per Inch.
-  pulse = pulseIn(SONAR_PIN, HIGH); //147uS per inch 
+  pulse = pulseIn(PIN_SONAR, HIGH); //147uS per inch 
   //if (sonarPulsoParaCentimetros(pulse) > 0)
   if (sonarPulsoParaCentimetros(pulse) > 0 && sonarPulsoParaCentimetros(pulse) < DISTANCIA_CONE_FORA_RADAR_CM)
     return true;
@@ -258,10 +278,10 @@ boolean rotacionarAteDetectarCone() {
 /**
  * Obtem a distancia em centimetros entre o Robo e o clone.
  *
- * @return unsigned int
+ * @return int
  */
-unsigned int getDistanciaDoCone() {
-  int pulse = pulseIn(SONAR_PIN, HIGH);
+int getDistanciaDoCone() {
+  int pulse = pulseIn(PIN_SONAR, HIGH);
   return sonarPulsoParaCentimetros(pulse);
 }
 
@@ -350,8 +370,8 @@ float obterPosicaoGrausCorrente() {
  * @param graus - grau destino
  * @param direcao - direcao no qual o Robo ira rotacionar para atingir o grau destino
  */
-void rotacionarPara(float graus, unsigned char direcao) {
-  unsigned int tolerancia = 2;
+void rotacionarPara(float graus, unsigned int direcao) {
+  unsigned int grausTolerancia = 2;
   
   pararMotores();
   if (direcao == DIREITA)
@@ -360,12 +380,99 @@ void rotacionarPara(float graus, unsigned char direcao) {
     moverParaEsquerda(VELOCIDADE_MIN);
 
   while(true) {
-    unsigned int diff = graus - obterPosicaoGrausCorrente();
-    if (diff < tolerancia) {
+    int diff = graus - obterPosicaoGrausCorrente();
+    if (diff < grausTolerancia) {
       pararMotores();
       break;
     }
   }
+}
+
+/**
+ * Obtem o quadrante de um determinado grau. O retorno é equivalente aos
+ * indeces definidos nas constantes.
+ * 
+ * @param graus - graus
+ * @return index do quadrante
+ */
+unsigned int getQuadrante(float graus) {
+  if (graus >= QUADRANTE_1_GRAU_INICIO && graus < QUADRANTE_2_GRAU_INICIO)
+    return QUADRANTE_1_INDICE;
+
+  if (graus >= QUADRANTE_2_GRAU_INICIO && graus < QUADRANTE_3_GRAU_INICIO)
+    return QUADRANTE_2_INDICE;
+
+  if (graus >= QUADRANTE_3_GRAU_INICIO && graus < QUADRANTE_4_GRAU_INICIO)
+    return QUADRANTE_3_INDICE;
+
+  return QUADRANTE_4_INDICE;
+}
+
+/**
+ * Obtem a direcao/sentido (DIREITA ou ESQUERDA) mais curto de um grau de origem 
+ * para um grau de destino.
+ *
+ * @param gOrigem - grau de origem
+ * @param gDestino - grau de destino
+ * @return unsigned int - direcao ou sentido mais curto para o destino
+ */
+unsigned int getDirecaoEntreQuadrantes(float gOrigem, float gDestino) {
+
+  int quadOrigem = getQuadrante(gOrigem);
+  int quadDestino = getQuadrante(gDestino);
+
+  // se origem e destino estiverem no mesmo quadrante
+  if (quadOrigem == quadDestino) {
+    if ((gOrigem - gDestino) > 0)
+      return ESQUERDA;
+    else 
+      return DIREITA;
+  }
+
+  if ((quadOrigem - quadDestino) < 0)
+      return DIREITA;
+
+  return ESQUERDA;
+}
+
+/**
+ * Roraciona o Robo para o grau destino, escolhendo o direcao/sentido 
+ * mais curto.
+ */
+void rotacionarParaCaminhoMaisCurto(float graus) {
+  pararMotores();
+  rotacionarPara(graus, getDirecaoEntreQuadrantes(obterPosicaoGrausCorrente(), graus));
+}
+
+/**
+ * Metodo usado para indicar quando um alvo e encontrado. 
+ */
+void sinalizarAlvoEncontrado() {
+  digitalWrite(PIN_SINALIZADOR_LED, HIGH);
+  delay(3 * 1000);
+}
+
+/**
+ * Convert a String to float value.
+ * 
+ * @param text
+ *      - the String
+ *
+ * @return float value
+ *
+ */
+float stringToFloat(String text) {
+  char carray[text.length() + 1];
+  text.toCharArray(carray, sizeof(carray));
+  return atof(carray);
+}
+
+void logger(char command, String value, char velocidade) {
+  Serial.print(command);  
+  Serial.print(" ");
+  Serial.print(value);
+  Serial.print(" ");
+  Serial.println(velocidade);
 }
 
 /**
@@ -375,64 +482,72 @@ void rotacionarPara(float graus, unsigned char direcao) {
  */
 String executarComando(char command, String value, char velocidade) {
   String resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
-  boolean isConeEncontrado = false;
   
   switch(command) {
     
     case COMANDO_PARAR_MOTORES:
+      Serial.println("COMANDO_PARAR_MOTORES ");
+      logger(command, value, velocidade);
       pararMotores(); 
       resp = SERVER_RESP_COMANDO_EXECUTADO;
-      Serial.println("COMANDO_PARAR_MOTORES ");
       break;
 
     case COMANDO_ANDAR_FRENTE:
+      Serial.println("COMANDO_ANDAR_FRENTE ");
+      logger(command, value, velocidade);
       pararMotores();
       moverParaFrente(velocidade);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
-      Serial.println("COMANDO_ANDAR_FRENTE ");
       break;
 
     case COMANDO_ANDAR_TRAZ:
+      Serial.println("COMANDO_ANDAR_TRAZ ");
+      logger(command, value, velocidade);
       pararMotores();
       moverParaTraz(velocidade);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
-      Serial.println("COMANDO_ANDAR_TRAZ ");
       break;
 
     case COMANDO_GIRAR_DIREITA:
+      Serial.println("COMANDO_GIRAR_DIREITA ");
+      logger(command, value, velocidade);
       pararMotores();
       moverParaDireita(velocidade);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
-      Serial.println("COMANDO_GIRAR_DIREITA ");
       break;
 
     case COMANDO_GIRAR_ESQUESDA:
+      Serial.println("COMANDO_GIRAR_ESQUERDA ");
+      logger(command, value, velocidade);
       pararMotores();
       moverParaEsquerda(velocidade);
       resp = SERVER_RESP_COMANDO_EXECUTADO;
-      Serial.println("COMANDO_GIRAR_ESQUERDA ");
+      break;
+      
+    case COMANDO_ROTACIONAR_PARA:
+      Serial.println("COMANDO_ROTACIONAR_PARA ");
+      logger(command, value, velocidade);
+      pararMotores();
+      rotacionarParaCaminhoMaisCurto(stringToFloat(value));
+      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
 
     case COMANDO_LOCALIZAR_CONE:
+      Serial.println("COMANDO_LOCALIZAR_CONE ");
+      logger(command, value, velocidade);
       pararMotores();
+      boolean isConeEncontrado = false;
       while(!isConeEncontrado) {
         isConeEncontrado = encontrarCone();
+        if (isConeEncontrado) {
+          pararMotores();
+          sinalizarAlvoEncontrado();
+        }
       }
       resp = SERVER_RESP_COMANDO_EXECUTADO;
-      Serial.println("COMANDO_LOCALIZAR_CONE ");
-      break;
-
-    case COMANDO_OBTER_GRAUS:
-      //resp = obterPosicaoGrausCorrente();
       break;
   }
-  
-  
-  Serial.print(value);
-  Serial.print(" ");
-  Serial.print(velocidade);
-  
-  
+
   return resp;
 }
 
@@ -442,7 +557,7 @@ String executarComando(char command, String value, char velocidade) {
 void initHttpServer() {
   // listen for incoming clients
   EthernetClient client = server.available();
-  unsigned int characters = 0;
+  int characters = 0;
   String value = "";
   char command;
   if (client) {
@@ -470,9 +585,9 @@ void initHttpServer() {
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println();
-          client.print("{\"status\" : " + resp + ", \"graus\": ");
-          client.print(obterPosicaoGrausCorrente());
-          client.print("}");
+          //client.print("{\"status\" : " + resp + ", \"graus\": ");
+          //client.print(obterPosicaoGrausCorrente());
+          //client.print("}");
           
           /*client.print(command);
           client.print(" ");
@@ -498,7 +613,7 @@ void initHttpServer() {
  * @param sec segundos para ser aguardado para inicializar o trekking
  */
 boolean isStarted = false;
-void aguardePrimeiraVez(unsigned int sec) {
+void aguardePrimeiraVez(int sec) {
   if (!isStarted) {
     delay(sec * 1000);
     isStarted = true;
@@ -513,19 +628,14 @@ void setup() {
   setupMotores();
   setupSonar();
   setupMagnetometro();
+  setupSinalizadorLED();
   Serial.begin(9600);
 }
 
 /**
  * Loop principal do Robo.
  */
-boolean isConeEncontrado = false;
 void loop() {
-  //aguardePrimeiraVez(5);
+  aguardePrimeiraVez(3);
   initHttpServer();
-  /*if (!isConeEncontrado) {
-    //encontrarCone();
-    rotacionarPara(200, DIREITA);
-    isConeEncontrado = true;
-  }*/
 }

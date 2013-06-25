@@ -31,26 +31,6 @@ public class TrekkingService extends Service implements Runnable {
 	private Intent intent;
 
 	/**
-	 * Envia o comando para o arduino.
-	 */
-	/*
-	 * private void converterButtonAction() { new AsyncTask<String, Void,
-	 * String>() {
-	 * 
-	 * @Override protected String doInBackground(String... params) { return
-	 * ArduinoHttpClient.sendCommand("1"); }
-	 * 
-	 * @Override protected void onPostExecute(String result) {
-	 * System.out.println(result); }
-	 * 
-	 * @Override protected void onPreExecute() {
-	 * 
-	 * }
-	 * 
-	 * }.execute(new String[] {}); }
-	 */
-
-	/**
 	 * Método que faz a leitura de fato dos valores recebidos do GPS.
 	 */
 	private void acionarGPS() {
@@ -116,12 +96,17 @@ public class TrekkingService extends Service implements Runnable {
 	 *            {@link Coordenada}
 	 */
 	private void moverDirecaoCone(final Coordenada destino) {
+		boolean isProximoCone = false;
+		while (!isProximoCone) {
+			if (this.coordenadaCorrente.rolamentoPara(destino) >= 45)
+				this.alinharRobo(destino);
 
-		if (this.coordenadaCorrente.rolamentoPara(destino) >= 90)
-			this.alinharRobo(destino);
+			if (this.coordenadaCorrente.distanciaPara(destino) > 3)
+				this.robo.moverParaFrente(Velocidade.MEDIA);
 
-		if (this.coordenadaCorrente.distanciaPara(destino) > 3)
-			this.robo.moverParaFrente(Velocidade.MAXIMA);
+			if (this.coordenadaCorrente.distanciaPara(destino) <= 3)
+				isProximoCone = true;
+		}
 	}
 
 	/**
@@ -130,9 +115,14 @@ public class TrekkingService extends Service implements Runnable {
 	public void run() {
 		List<Coordenada> destinos = this.getDestinos();
 
+		this.coordenadaCorrente = new Coordenada(
+				this.intent.getDoubleArrayExtra("cu")[0],
+				this.intent.getDoubleArrayExtra("cu")[1]);
+
 		// percorre todos os destinos
-		for (int i = 0; i < destinos.size(); i++) {
-			Coordenada destino = destinos.get(i);
+		// for (int i = 0; i < destinos.size(); i++) {
+		while (!destinos.isEmpty()) {
+			Coordenada destino = destinos.get(0);
 			boolean isConeEncontrado = false;
 
 			// logica para encontrar cone
@@ -141,27 +131,27 @@ public class TrekkingService extends Service implements Runnable {
 				if (this.coordenadaCorrente.isNotNull()) {
 					this.moverDirecaoCone(destino);
 					if (this.robo.localizarCone())
-						destinos.remove(i);
+						break;
 				}
 			}
-
+			Toast.makeText(this, "Removendo", Toast.LENGTH_SHORT).show();
+			destinos.remove(0);
 		}
-		Toast.makeText(this, "Fora do laco", Toast.LENGTH_LONG).show();
+		Toast.makeText(this, "Fim do Trekking! Ganhamos?", Toast.LENGTH_LONG)
+				.show();
 	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		// return Service.START_NOT_STICKY;
-
 		// We want this service to continue running until it is explicitly
 		// stopped, so return sticky.
 		Toast.makeText(this, "onStartCommand", Toast.LENGTH_LONG).show();
 		// ArduinoHttpClient.sendCommand("1");
-		acionarGPS();
+		this.acionarGPS();
 		this.intent = intent;
 		this.run();
-		// return Service.START_STICKY;
-		return Service.START_NOT_STICKY;
+		return Service.START_STICKY;
+		// return Service.START_NOT_STICKY;
 	}
 
 	@Override

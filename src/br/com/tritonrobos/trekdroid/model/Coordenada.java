@@ -1,7 +1,7 @@
 package br.com.tritonrobos.trekdroid.model;
 
 import android.location.Location;
-import br.com.tritonrobos.trekdroid.util.CoordinateUtil;
+import br.com.tritonrobos.trekdroid.util.CoordenadaUtil;
 
 /**
  * Objeto que representa coordenadas geograficas (Latitude/Longitude).
@@ -110,7 +110,7 @@ public class Coordenada {
 	 * @return {@link Double}
 	 */
 	public Double distanciaPara(final Coordenada destino) {
-		return CoordinateUtil.getDistancia(this, destino);
+		return CoordenadaUtil.getDistancia(this, destino);
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class Coordenada {
 	 * @return {@link Double}
 	 */
 	public Double rolamentoPara(final Coordenada destino) {
-		return CoordinateUtil.getRolamento(this, destino);
+		return CoordenadaUtil.getRolamento(this, destino);
 	}
 
 	/**

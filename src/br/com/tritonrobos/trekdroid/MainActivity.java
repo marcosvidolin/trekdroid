@@ -98,6 +98,7 @@ public class MainActivity extends Activity {
 				i.putExtra("d1", destinos.get(0).toArry());
 				i.putExtra("d2", destinos.get(1).toArry());
 				i.putExtra("d3", destinos.get(2).toArry());
+				i.putExtra("cu", coordenadaCorrente.toArry());
 				startService(i);
 			}
 		});

@@ -13,6 +13,7 @@ import org.apache.http.util.EntityUtils;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino.Comando;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino.Velocidade;
+import br.com.tritonrobos.trekdroid.util.CoordenadaUtil;
 
 /**
  * Cliente HTTP do Arduino, responsavel por se comunicar com o Robo atraves de
@@ -48,10 +49,10 @@ public class ArduinoHttpClient {
 	 */
 	private String sendCommand(final String command) {
 		String responseString = null;
+		HttpClient client = new DefaultHttpClient();
+		HttpGet method = new HttpGet(getEndereco(command));
 		try {
-			HttpGet get = new HttpGet(getEndereco(command));
-			HttpClient client = new DefaultHttpClient();
-			HttpResponse response = client.execute(get);
+			HttpResponse response = client.execute(method);
 			HttpEntity entity = response.getEntity();
 			responseString = EntityUtils.toString(entity);
 		} catch (ClientProtocolException e) {
@@ -141,13 +142,23 @@ public class ArduinoHttpClient {
 	}
 
 	/**
+	 * Envia um comando para o Rovo se alinhar de acordo com o grau informado
+	 * (formatado).
+	 * 
+	 * @param graus
+	 *            {@link String}
+	 */
+	public void rotacionarPara(final String graus) {
+		ComandoArduino comando = new ComandoArduino.Builder()
+				.comando(Comando.ROTACIONAR_PARA).valor(graus).build();
+		this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
 	 * Envia um comando para o Rovo se alinhar de acordo com o grau informado.
 	 */
 	public void rotacionarPara(final Double graus) {
-		ComandoArduino comando = new ComandoArduino.Builder()
-				.comando(Comando.ROTACIONAR_PARA).valor(graus.toString())
-				.build();
-		this.sendCommand(comando.getComandoComoTexto());
+		this.rotacionarPara(CoordenadaUtil.getRolamentoFormatado(graus));
 	}
 
 }
