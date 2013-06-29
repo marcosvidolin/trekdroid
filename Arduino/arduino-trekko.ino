@@ -293,7 +293,6 @@ int getDistanciaDoCone() {
  * @return boolean
  */
 boolean moverDirecaoCone() {
-  
   // caso ja esteja proximo o suficiente do cone
   if (getDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
     pararMotores();
@@ -371,7 +370,7 @@ float obterPosicaoGrausCorrente() {
  * @param direcao - direcao no qual o Robo ira rotacionar para atingir o grau destino
  */
 void rotacionarPara(float graus, unsigned int direcao) {
-  unsigned int grausTolerancia = 2;
+  unsigned int grausTolerancia = 3;
   
   pararMotores();
   if (direcao == DIREITA)
@@ -381,7 +380,13 @@ void rotacionarPara(float graus, unsigned int direcao) {
 
   while(true) {
     int diff = graus - obterPosicaoGrausCorrente();
-    if (diff < grausTolerancia) {
+    
+    if (diff < 0)
+      diff = diff * -1;
+
+    Serial.println("procurando...");
+    if (diff <= grausTolerancia) {
+      Serial.println("Parou!");
       pararMotores();
       break;
     }
@@ -448,6 +453,7 @@ void rotacionarParaCaminhoMaisCurto(float graus) {
  * Metodo usado para indicar quando um alvo e encontrado. 
  */
 void sinalizarAlvoEncontrado() {
+  pararMotores();
   digitalWrite(PIN_SINALIZADOR_LED, HIGH);
   delay(3 * 1000);
 }
@@ -467,6 +473,9 @@ float stringToFloat(String text) {
   return atof(carray);
 }
 
+/**
+ * Loga o comando enviado.
+ */
 void logger(char command, String value, char velocidade) {
   Serial.print(command);  
   Serial.print(" ");
@@ -479,17 +488,18 @@ void logger(char command, String value, char velocidade) {
  * Executa os comandos recebidos do Android.
  *
  * @param command - comando a ser executado pelo Robo
+ * @param value - valor do comando (geralmento o grau de 
+ *                 rotacao para o comando rotacionarPara(graus))
+ * @param velocidade - velocidade do Robo para o movimento
  */
-String executarComando(char command, String value, char velocidade) {
-  String resp = SERVER_RESP_COMANDO_NAO_EXECUTADO;
+void executarComando(char command, String value, char velocidade) {
   
   switch(command) {
-    
+
     case COMANDO_PARAR_MOTORES:
       Serial.println("COMANDO_PARAR_MOTORES ");
       logger(command, value, velocidade);
       pararMotores(); 
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
 
     case COMANDO_ANDAR_FRENTE:
@@ -497,7 +507,6 @@ String executarComando(char command, String value, char velocidade) {
       logger(command, value, velocidade);
       pararMotores();
       moverParaFrente(velocidade);
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
 
     case COMANDO_ANDAR_TRAZ:
@@ -505,7 +514,6 @@ String executarComando(char command, String value, char velocidade) {
       logger(command, value, velocidade);
       pararMotores();
       moverParaTraz(velocidade);
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
 
     case COMANDO_GIRAR_DIREITA:
@@ -513,7 +521,6 @@ String executarComando(char command, String value, char velocidade) {
       logger(command, value, velocidade);
       pararMotores();
       moverParaDireita(velocidade);
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
 
     case COMANDO_GIRAR_ESQUESDA:
@@ -521,7 +528,13 @@ String executarComando(char command, String value, char velocidade) {
       logger(command, value, velocidade);
       pararMotores();
       moverParaEsquerda(velocidade);
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
+      break;
+
+    case COMANDO_OBTER_GRAUS:
+      Serial.println("COMANDO_OBTER_GRAUS ");
+      logger(command, value, velocidade);
+      // nada é feito pois, por padrão o grau corrente 
+      // sempre é retornado como resposta
       break;
       
     case COMANDO_ROTACIONAR_PARA:
@@ -529,7 +542,6 @@ String executarComando(char command, String value, char velocidade) {
       logger(command, value, velocidade);
       pararMotores();
       rotacionarParaCaminhoMaisCurto(stringToFloat(value));
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
 
     case COMANDO_LOCALIZAR_CONE:
@@ -544,17 +556,28 @@ String executarComando(char command, String value, char velocidade) {
           sinalizarAlvoEncontrado();
         }
       }
-      resp = SERVER_RESP_COMANDO_EXECUTADO;
       break;
   }
+}
 
-  return resp;
+/**
+ * Funcao executada apenas uma vez na inicializacao.
+ * Aguarda (delay) em segundos antes de iniciar o trekking.
+ * 
+ * @param sec segundos para ser aguardado para inicializar o trekking
+ */
+boolean isStarted = false;
+void aguardePrimeiraVez(int sec) {
+  if (!isStarted) {
+    delay(sec * 1000);
+    isStarted = true;
+  }
 }
 
 /**
  * Inicia o servidor HTTP do Robo.
  */
-void initHttpServer() {
+void initHttpCommandListener() {
   // listen for incoming clients
   EthernetClient client = server.available();
   int characters = 0;
@@ -575,25 +598,15 @@ void initHttpServer() {
           value += c;
         } else if (characters == 10) {
           
-          String resp = executarComando(command, value, c);
-          
-          //
-          // delay de dez segundos
-          //delay(10*1000);
+          aguardePrimeiraVez(5);
+          executarComando(command, value, c);
                     
           // send a standard http response header
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println();
-          //client.print("{\"status\" : " + resp + ", \"graus\": ");
-          //client.print(obterPosicaoGrausCorrente());
-          //client.print("}");
-          
-          /*client.print(command);
-          client.print(" ");
-          client.print(value);
-          client.print(" ");
-          client.print(c);*/
+          client.println(obterPosicaoGrausCorrente());
+
           break;
         }
         
@@ -603,20 +616,6 @@ void initHttpServer() {
     delay(1);
     // close the connection:
     client.stop();
-  }
-}
-
-/**
- * Funcao executada apenas uma vez na inicializacao.
- * Aguarda (delay) em segundos antes de iniciar o trekking.
- * 
- * @param sec segundos para ser aguardado para inicializar o trekking
- */
-boolean isStarted = false;
-void aguardePrimeiraVez(int sec) {
-  if (!isStarted) {
-    delay(sec * 1000);
-    isStarted = true;
   }
 }
 
@@ -636,6 +635,5 @@ void setup() {
  * Loop principal do Robo.
  */
 void loop() {
-  aguardePrimeiraVez(3);
-  initHttpServer();
+  initHttpCommandListener();
 }

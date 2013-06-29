@@ -43,6 +43,11 @@ public class MainActivity extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		// StrictMode.ThreadPolicy policy = new
+		// StrictMode.ThreadPolicy.Builder().permitAll().build();
+		// StrictMode.setThreadPolicy(policy);
+
 		setupElements();
 	}
 
@@ -64,6 +69,18 @@ public class MainActivity extends Activity {
 		coordenadaCapturada.setLongitude(Double.valueOf(edLongitude.getText()
 				.toString()));
 		return coordenadaCapturada;
+	}
+
+	/**
+	 * Inicio o servico em background do trekking.
+	 */
+	private void iniciarServicoTrekking() {
+		Intent i = new Intent("TREKKING_SERVICE");
+		i.putExtra("d1", destinos.get(0).toArry());
+		i.putExtra("d2", destinos.get(1).toArry());
+		i.putExtra("d3", destinos.get(2).toArry());
+		i.putExtra("cu", coordenadaCorrente.toArry());
+		startService(i);
 	}
 
 	/**
@@ -94,12 +111,7 @@ public class MainActivity extends Activity {
 		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
 		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				Intent i = new Intent("TREKKING_SERVICE");
-				i.putExtra("d1", destinos.get(0).toArry());
-				i.putExtra("d2", destinos.get(1).toArry());
-				i.putExtra("d3", destinos.get(2).toArry());
-				i.putExtra("cu", coordenadaCorrente.toArry());
-				startService(i);
+				iniciarServicoTrekking();
 			}
 		});
 	}

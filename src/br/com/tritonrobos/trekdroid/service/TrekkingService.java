@@ -1,6 +1,7 @@
 package br.com.tritonrobos.trekdroid.service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import android.app.Service;
@@ -26,7 +27,7 @@ public class TrekkingService extends Service implements Runnable {
 
 	private Coordenada coordenadaCorrente = new Coordenada();
 
-	ArduinoHttpClient robo = new ArduinoHttpClient();
+	private ArduinoHttpClient robo = new ArduinoHttpClient();
 
 	private Intent intent;
 
@@ -96,21 +97,40 @@ public class TrekkingService extends Service implements Runnable {
 	 *            {@link Coordenada}
 	 */
 	private void moverDirecaoCone(final Coordenada destino) {
+		// flags de controle de fluxo, evita enviar o mesmo comando varias vezes
+		// para o Robo
 		boolean isProximoCone = false;
+		boolean isMovendoParaFrente = false;
+		long lastTime = new Date().getTime();
+
 		while (!isProximoCone) {
-			if (this.coordenadaCorrente.rolamentoPara(destino) >= 45)
-				this.alinharRobo(destino);
 
-			if (this.coordenadaCorrente.distanciaPara(destino) > 3)
-				this.robo.moverParaFrente(Velocidade.MEDIA);
+			// checa de tempos em tempos se o robo esta alinhado com o destino
+			if ((lastTime - new Date().getTime()) > 3000) {
+				// Se a diferenca do grau atual do Robo para o grau de destino
+				// for superior a 45 graus entao, alinhar Robo.
+				if ((this.coordenadaCorrente.rolamentoPara(destino) - this.robo
+						.obterGrauCorrente()) >= 45) {
+					this.alinharRobo(destino);
+					isMovendoParaFrente = false;
+				}
+				lastTime = new Date().getTime();
+			}
 
-			if (this.coordenadaCorrente.distanciaPara(destino) <= 3)
+			if (!isMovendoParaFrente) {
+				if (this.coordenadaCorrente.distanciaPara(destino) > 2) {
+					this.robo.moverParaFrente(Velocidade.MEDIA);
+					isMovendoParaFrente = true;
+				}
+			}
+
+			if (this.coordenadaCorrente.distanciaPara(destino) <= 2)
 				isProximoCone = true;
 		}
 	}
 
 	/**
-	 * Inicia a execucao do trekking.
+	 * Inicia a execucao do trekking em uma nova thread.
 	 */
 	public void run() {
 		List<Coordenada> destinos = this.getDestinos();
@@ -120,8 +140,8 @@ public class TrekkingService extends Service implements Runnable {
 				this.intent.getDoubleArrayExtra("cu")[1]);
 
 		// percorre todos os destinos
-		// for (int i = 0; i < destinos.size(); i++) {
 		while (!destinos.isEmpty()) {
+
 			Coordenada destino = destinos.get(0);
 			boolean isConeEncontrado = false;
 
@@ -130,12 +150,12 @@ public class TrekkingService extends Service implements Runnable {
 			while (!isConeEncontrado) {
 				if (this.coordenadaCorrente.isNotNull()) {
 					this.moverDirecaoCone(destino);
-					if (this.robo.localizarCone())
+					if (this.robo.localizarCone()) {
+						destinos.remove(0);
 						break;
+					}
 				}
 			}
-			Toast.makeText(this, "Removendo", Toast.LENGTH_SHORT).show();
-			destinos.remove(0);
 		}
 		Toast.makeText(this, "Fim do Trekking! Ganhamos?", Toast.LENGTH_LONG)
 				.show();
@@ -143,15 +163,13 @@ public class TrekkingService extends Service implements Runnable {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		// We want this service to continue running until it is explicitly
-		// stopped, so return sticky.
-		Toast.makeText(this, "onStartCommand", Toast.LENGTH_LONG).show();
-		// ArduinoHttpClient.sendCommand("1");
 		this.acionarGPS();
 		this.intent = intent;
 		this.run();
-		return Service.START_STICKY;
-		// return Service.START_NOT_STICKY;
+		// We want this service to continue running until it is explicitly
+		// stopped, so return sticky.
+		// return Service.START_STICKY;
+		return Service.START_NOT_STICKY;
 	}
 
 	@Override

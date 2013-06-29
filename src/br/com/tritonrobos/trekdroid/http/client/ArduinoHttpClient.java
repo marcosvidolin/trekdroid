@@ -10,6 +10,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 
+import android.util.Log;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino.Comando;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino.Velocidade;
@@ -23,6 +24,8 @@ import br.com.tritonrobos.trekdroid.util.CoordenadaUtil;
  * @sinze 25/05/2013
  */
 public class ArduinoHttpClient {
+
+	private final static String LOG_TAG = "ArduinoHttpClient";
 
 	/**
 	 * Endereco do servidor (Arduino).
@@ -68,11 +71,14 @@ public class ArduinoHttpClient {
 
 	/**
 	 * Envia um comando para que os motores do robo sejam parados.
+	 * 
+	 * @return {@link String} resposta
 	 */
-	public void pararMotores() {
+	public String pararMotores() {
 		ComandoArduino comando = new ComandoArduino.Builder().comando(
 				Comando.PARAR_MOTORES).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "pararMotores()");
+		return this.sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -80,11 +86,13 @@ public class ArduinoHttpClient {
 	 * 
 	 * @param velocidade
 	 *            {@link Velocidade}
+	 * @return {@link String} resposta
 	 */
-	public void moverParaFrente(final Velocidade velocidade) {
+	public String moverParaFrente(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.ANDAR_FRENTE).velocidade(velocidade).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "moverParaFrente()");
+		return this.sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -92,11 +100,13 @@ public class ArduinoHttpClient {
 	 * 
 	 * @param velocidade
 	 *            {@link Velocidade}
+	 * @return {@link String} resposta
 	 */
-	public void moverParaTraz(final Velocidade velocidade) {
+	public String moverParaTraz(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.ANDAR_TRAZ).velocidade(velocidade).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "moverParaTraz()");
+		return this.sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -105,11 +115,13 @@ public class ArduinoHttpClient {
 	 * 
 	 * @param velocidade
 	 *            {@link Velocidade}
+	 * @return {@link String} resposta
 	 */
-	public void rotacionarParaDireita(final Velocidade velocidade) {
+	public String rotacionarParaDireita(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.GIRAR_DIREITA).velocidade(velocidade).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "moverParaDireita()");
+		return this.sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -118,11 +130,25 @@ public class ArduinoHttpClient {
 	 * 
 	 * @param velocidade
 	 *            {@link Velocidade}
+	 * @return {@link String} resposta
 	 */
-	public void rotacionarParaEsquerda(final Velocidade velocidade) {
+	public String rotacionarParaEsquerda(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.GIRAR_ESQUESDA).velocidade(velocidade).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "moverParaEsquerda()");
+		return this.sendCommand(comando.getComandoComoTexto());
+	}
+
+	/**
+	 * Obtem a grau corrente referente a posição do Robo em relação ao norte.
+	 * 
+	 * @return {@link String} resposta
+	 */
+	public Double obterGrauCorrente() {
+		ComandoArduino comando = new ComandoArduino.Builder().comando(
+				Comando.OBTER_GRAUS).build();
+		Log.i(LOG_TAG, "obterGrauCorrente()");
+		return Double.valueOf(this.sendCommand(comando.getComandoComoTexto()));
 	}
 
 	/**
@@ -136,6 +162,8 @@ public class ArduinoHttpClient {
 				Comando.LOCALIZAR_CONE).build();
 		this.sendCommand(comando.getComandoComoTexto());
 
+		Log.i(LOG_TAG, "localizarCone()");
+
 		// TODO: tratar retorno da requisicao para saber se o cone foi
 		// encontrado
 		return true;
@@ -147,18 +175,24 @@ public class ArduinoHttpClient {
 	 * 
 	 * @param graus
 	 *            {@link String}
+	 * @return {@link String} resposta
 	 */
-	public void rotacionarPara(final String graus) {
+	public String rotacionarPara(final String graus) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.ROTACIONAR_PARA).valor(graus).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "rotacionarPara()");
+		return this.sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
 	 * Envia um comando para o Rovo se alinhar de acordo com o grau informado.
+	 * 
+	 * @param graus
+	 *            {@link Double}
+	 * @return {@link String} resposta
 	 */
-	public void rotacionarPara(final Double graus) {
-		this.rotacionarPara(CoordenadaUtil.getRolamentoFormatado(graus));
+	public String rotacionarPara(final Double graus) {
+		return this.rotacionarPara(CoordenadaUtil.getRolamentoFormatado(graus));
 	}
 
 }
