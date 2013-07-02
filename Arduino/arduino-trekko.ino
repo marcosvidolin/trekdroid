@@ -40,8 +40,8 @@ const unsigned int ANGULO_MAX_RE = 60;
 
 //
 // Constantes referentes ao sonar (distancia do cone).
-const unsigned long DISTANCIA_CONE_ENCONTRADO_CM = 25;
-const unsigned long DISTANCIA_CONE_FORA_RADAR_CM = 400;
+const unsigned long DISTANCIA_CONE_ENCONTRADO_CM = 30;
+const unsigned long DISTANCIA_CONE_FORA_RADAR_CM = 200;
 
 //
 // Constantes referentes aos quadrantes.
@@ -237,22 +237,30 @@ long sonarPulsoParaCentimetros(long pulso) {
 }
 
 /**
+ * Obtem a distancia em centimetros entre o Robo e o clone.
+ *
+ * @return long
+ */
+long obterDistanciaDoCone() {
+  //Used to read in the pulse that is being sent by the MaxSonar device.
+  //Pulse Width representation with a scale factor of 147 uS per Inch.
+  long pulse = pulseIn(PIN_SONAR, HIGH); //147uS per inch 
+  return sonarPulsoParaCentimetros(pulse);
+}
+
+/**
  * Checa se um objeto foi detectado pelo sonar.
  *
  * @return boolean indicando se um objeto foi detectado pelo sonar
  */
 boolean isObjetoDetectadoViaSonar() {
-  long pulse;
   //delay(250);
   delay(150);
-  
-  //Used to read in the pulse that is being sent by the MaxSonar device.
-  //Pulse Width representation with a scale factor of 147 uS per Inch.
-  pulse = pulseIn(PIN_SONAR, HIGH); //147uS per inch 
-  long distancia_cm = sonarPulsoParaCentimetros(pulse);
+
+  long distancia_cm = obterDistanciaDoCone();
   if (distancia_cm > 0 && distancia_cm < DISTANCIA_CONE_FORA_RADAR_CM)
     return true;
- 
+
   return false;
 }
 
@@ -288,16 +296,6 @@ boolean rotacionarAteDetectarCone() {
 }
 
 /**
- * Obtem a distancia em centimetros entre o Robo e o clone.
- *
- * @return int
- */
-int getDistanciaDoCone() {
-  int pulse = pulseIn(PIN_SONAR, HIGH);
-  return sonarPulsoParaCentimetros(pulse);
-}
-
-/**
  * Anda continuamente em direcao ao cone. Retorna true, caso esteja
  * em uma distancia de 20 cm do cone (perto o bastante). Retorna falso
  * caso o cone saia do radar do sonar.
@@ -306,7 +304,7 @@ int getDistanciaDoCone() {
  */
 boolean moverDirecaoCone() {
   // caso ja esteja proximo o suficiente do cone
-  if (getDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
+  if (obterDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
     pararMotores();
     return true;
   }
@@ -314,13 +312,13 @@ boolean moverDirecaoCone() {
   moverParaFrente(VELOCIDADE_MED);
   while (true) {
     // proximo o bastante
-    if (getDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
+    if (obterDistanciaDoCone() <= DISTANCIA_CONE_ENCONTRADO_CM) {
       pararMotores();
       return true;
     }
 
     // perdeu o cone do sonar
-    if (getDistanciaDoCone() >= DISTANCIA_CONE_FORA_RADAR_CM) {
+    if (obterDistanciaDoCone() >= DISTANCIA_CONE_FORA_RADAR_CM) {
       pararMotores();
       return false;
     }
@@ -407,7 +405,6 @@ void rotacionarPara(float graus, unsigned int direcao) {
   while(true) {
     if (obterDiferencaEntreGraus(graus, obterGrausCorrente()) <= grausTolerancia) {
       pararMotores();
-      Serial.println("Robo alinhado!!");
       break;
     }
   }
@@ -541,8 +538,8 @@ char trekking(float distancia, float graus) {
   
   // alinha em direcao ao cone
   if (obterDiferencaEntreGraus(graus, obterGrausCorrente()) >= 15) {
-    rotacionarParaCaminhoMaisCurto(graus);
     logger(distancia, graus, "alinhando robo em direcao cone...");
+    rotacionarParaCaminhoMaisCurto(graus);
     return '0';
   }
 
