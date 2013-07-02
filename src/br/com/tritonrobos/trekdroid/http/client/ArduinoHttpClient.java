@@ -50,7 +50,7 @@ public class ArduinoHttpClient {
 	 *            {@link String}
 	 * @return {@link String} response
 	 */
-	private String sendCommand(final String command) {
+	private static String sendCommand(final String command) {
 		String responseString = null;
 		HttpClient client = new DefaultHttpClient();
 		HttpGet method = new HttpGet(getEndereco(command));
@@ -70,6 +70,21 @@ public class ArduinoHttpClient {
 	}
 
 	/**
+	 * Envia a os valores de distancia e graus para o Robo.
+	 * 
+	 * @param distancia
+	 *            {@link Double}
+	 * @param graus
+	 *            {@link Double}
+	 * @return {@link String} "999;999"
+	 */
+	public static String sendValues(final Double distancia, final Double graus) {
+		String d = CoordenadaUtil.getValorFormatado(distancia);
+		String g = CoordenadaUtil.getValorFormatado(graus);
+		return sendCommand(d + ";" + g);
+	}
+
+	/**
 	 * Envia um comando para que os motores do robo sejam parados.
 	 * 
 	 * @return {@link String} resposta
@@ -77,8 +92,8 @@ public class ArduinoHttpClient {
 	public String pararMotores() {
 		ComandoArduino comando = new ComandoArduino.Builder().comando(
 				Comando.PARAR_MOTORES).build();
-		Log.i(LOG_TAG, "pararMotores()");
-		return this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "mvidolin pararMotores()");
+		return sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -91,8 +106,8 @@ public class ArduinoHttpClient {
 	public String moverParaFrente(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.ANDAR_FRENTE).velocidade(velocidade).build();
-		Log.i(LOG_TAG, "moverParaFrente()");
-		return this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "mvidolin moverParaFrente()");
+		return sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -105,8 +120,8 @@ public class ArduinoHttpClient {
 	public String moverParaTraz(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.ANDAR_TRAZ).velocidade(velocidade).build();
-		Log.i(LOG_TAG, "moverParaTraz()");
-		return this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "mvidolin moverParaTraz()");
+		return sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -120,8 +135,8 @@ public class ArduinoHttpClient {
 	public String rotacionarParaDireita(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.GIRAR_DIREITA).velocidade(velocidade).build();
-		Log.i(LOG_TAG, "moverParaDireita()");
-		return this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "mvidolin moverParaDireita()");
+		return sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -135,8 +150,8 @@ public class ArduinoHttpClient {
 	public String rotacionarParaEsquerda(final Velocidade velocidade) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.GIRAR_ESQUESDA).velocidade(velocidade).build();
-		Log.i(LOG_TAG, "moverParaEsquerda()");
-		return this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "mvidolin moverParaEsquerda()");
+		return sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -147,8 +162,16 @@ public class ArduinoHttpClient {
 	public Double obterGrauCorrente() {
 		ComandoArduino comando = new ComandoArduino.Builder().comando(
 				Comando.OBTER_GRAUS).build();
-		Log.i(LOG_TAG, "obterGrauCorrente()");
-		return Double.valueOf(this.sendCommand(comando.getComandoComoTexto()));
+
+		String resp = sendCommand(comando.getComandoComoTexto());
+		if (resp != null && resp.length() > 0) {
+			Log.i(LOG_TAG, "mvidolin obterGrauCorrente() " + resp);
+			return Double.valueOf(resp);
+		}
+
+		Log.i(LOG_TAG, "mvidolin obterGrauCorrente() " + resp);
+
+		return Double.valueOf(0);
 	}
 
 	/**
@@ -160,9 +183,9 @@ public class ArduinoHttpClient {
 	public boolean localizarCone() {
 		ComandoArduino comando = new ComandoArduino.Builder().comando(
 				Comando.LOCALIZAR_CONE).build();
-		this.sendCommand(comando.getComandoComoTexto());
+		sendCommand(comando.getComandoComoTexto());
 
-		Log.i(LOG_TAG, "localizarCone()");
+		Log.i(LOG_TAG, "mvidolin localizarCone()");
 
 		// TODO: tratar retorno da requisicao para saber se o cone foi
 		// encontrado
@@ -180,8 +203,8 @@ public class ArduinoHttpClient {
 	public String rotacionarPara(final String graus) {
 		ComandoArduino comando = new ComandoArduino.Builder()
 				.comando(Comando.ROTACIONAR_PARA).valor(graus).build();
-		Log.i(LOG_TAG, "rotacionarPara()");
-		return this.sendCommand(comando.getComandoComoTexto());
+		Log.i(LOG_TAG, "mvidolin rotacionarPara()");
+		return sendCommand(comando.getComandoComoTexto());
 	}
 
 	/**
@@ -192,7 +215,7 @@ public class ArduinoHttpClient {
 	 * @return {@link String} resposta
 	 */
 	public String rotacionarPara(final Double graus) {
-		return this.rotacionarPara(CoordenadaUtil.getRolamentoFormatado(graus));
+		return rotacionarPara(CoordenadaUtil.getValorFormatado(graus));
 	}
 
 }

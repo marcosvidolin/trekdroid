@@ -44,12 +44,6 @@
     </LinearLayout>
 
     <Button
-        android:id="@+id/btAtivarGPS"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Ativar GPS" />
-
-    <Button
         android:id="@+id/btSalvarLocalizacao"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

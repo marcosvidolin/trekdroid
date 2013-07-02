@@ -1,4 +1,4 @@
- /**
+/**
  * Programa usado no Arduino UNO para controle do Robo de Trekking.
  * @author Marcos Vidolin
  * @since 04/05/2013
@@ -8,7 +8,6 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <HMC.h>
-
 
 //
 // Constantes de direcao
@@ -21,7 +20,7 @@ const unsigned int ESQUERDA = 2;
 const unsigned int PIN_SONAR           = 2;
 const unsigned int PIN_MOTOR_DIREITO   = 5;
 const unsigned int PIN_MOTOR_ESQUERDO  = 6;
-const unsigned int PIN_SINALIZADOR_LED = A0;
+const unsigned int PIN_SINALIZADOR_LED = 7;
 
 //
 // Constantes referentes aos motores.
@@ -41,24 +40,8 @@ const unsigned int ANGULO_MAX_RE = 60;
 
 //
 // Constantes referentes ao sonar (distancia do cone).
-const unsigned int DISTANCIA_CONE_ENCONTRADO_CM = 20;
-const unsigned int DISTANCIA_CONE_FORA_RADAR_CM = 400;
-
-//
-// Constantes referentes aos commandos recebidos do Android.
-const char COMANDO_PARAR_MOTORES   = '0';
-const char COMANDO_ANDAR_FRENTE    = '1';
-const char COMANDO_ANDAR_TRAZ      = '2';
-const char COMANDO_GIRAR_DIREITA   = '3';
-const char COMANDO_GIRAR_ESQUESDA  = '4';
-const char COMANDO_LOCALIZAR_CONE  = '5';
-const char COMANDO_OBTER_GRAUS     = '6';
-const char COMANDO_ROTACIONAR_PARA = '7';
-
-//
-// Constantes referentes aos commandos recebidos do Android.
-const String SERVER_RESP_COMANDO_NAO_EXECUTADO = "0";
-const String SERVER_RESP_COMANDO_EXECUTADO     = "1";
+const unsigned long DISTANCIA_CONE_ENCONTRADO_CM = 25;
+const unsigned long DISTANCIA_CONE_FORA_RADAR_CM = 400;
 
 //
 // Constantes referentes aos quadrantes.
@@ -133,6 +116,35 @@ void setupMagnetometro() {
  */
 void setupSinalizadorLED() {
   pinMode(PIN_SINALIZADOR_LED, OUTPUT);
+}
+
+/**
+ * Funcao executada apenas uma vez na inicializacao.
+ * Aguarda (delay) em segundos antes de iniciar o trekking.
+ * 
+ * @param sec segundos para ser aguardado para inicializar o trekking
+ */
+boolean isStarted = false;
+void aguardePrimeiraVez(int sec) {
+  if (!isStarted) {
+    delay(sec * 1000);
+    isStarted = true;
+  }
+}
+
+/**
+ * Convert a String to float value.
+ * 
+ * @param text
+ *      - the String
+ *
+ * @return float value
+ *
+ */
+float stringToFloat(String text) {
+  char carray[text.length() + 1];
+  text.toCharArray(carray, sizeof(carray));
+  return atof(carray);
 }
 
 /**
@@ -215,7 +227,7 @@ void rotacionar360Graus() {
  *
  * Existem 29 microssegundos em 1 cm, entao divide-se o valor do pulso por 29.
  * Com isso obtem-se a distancia total (centimetros) percorridos apartir do 
- * disparo do pulso ate atingir um objeto e volta. Entao divide-se a distancia
+ * disparo do pulso ate atingir um objeto e volta. Entao, divide-se a distancia
  * total por 2 para obter a distancia entre sensor e o objeto.
  *
  * @return long
@@ -237,8 +249,8 @@ boolean isObjetoDetectadoViaSonar() {
   //Used to read in the pulse that is being sent by the MaxSonar device.
   //Pulse Width representation with a scale factor of 147 uS per Inch.
   pulse = pulseIn(PIN_SONAR, HIGH); //147uS per inch 
-  //if (sonarPulsoParaCentimetros(pulse) > 0)
-  if (sonarPulsoParaCentimetros(pulse) > 0 && sonarPulsoParaCentimetros(pulse) < DISTANCIA_CONE_FORA_RADAR_CM)
+  long distancia_cm = sonarPulsoParaCentimetros(pulse);
+  if (distancia_cm > 0 && distancia_cm < DISTANCIA_CONE_FORA_RADAR_CM)
     return true;
  
   return false;
@@ -251,13 +263,13 @@ boolean isObjetoDetectadoViaSonar() {
  * @return boolean indicando se o alvo foi encontrado
  */
 boolean rotacionarAteDetectarCone() {
-  
+
   // caso ja esteja alinhado com o cone
   if (isObjetoDetectadoViaSonar()) {
     pararMotores();
     return true;
   }
-  
+
   // rotaciona ate encontrar o alvo, ou ate terminar os 360 graus
   rotacionar360Graus();
   while (true) {
@@ -266,7 +278,7 @@ boolean rotacionarAteDetectarCone() {
       pararMotores();
       return true;
     }
-      
+
     // TODO: if Robo ja rotacionou completamente.
     // pararMotores();
     // return false;
@@ -344,7 +356,7 @@ boolean encontrarCone() {
  *
  * @return float
  */
-float obterPosicaoGrausCorrente() {
+float obterGrausCorrente() {
   int x,y,z;
 
   // There will be new values every 100ms
@@ -360,6 +372,20 @@ float obterPosicaoGrausCorrente() {
    
   // Convert radians to degrees for readability.
   return heading * 180 / M_PI;
+}
+
+/**
+ * Obtem a diferenca entre os graus informados por parametro,
+ *
+ * @param g1 float
+ * @param g2 float
+ * @return float
+ */
+float obterDiferencaEntreGraus(float g1, float g2) {
+  float diff = g1 - g2;
+  if (diff < 0)
+    return diff * -1;
+  return diff;
 }
 
 /**
@@ -379,15 +405,9 @@ void rotacionarPara(float graus, unsigned int direcao) {
     moverParaEsquerda(VELOCIDADE_MIN);
 
   while(true) {
-    int diff = graus - obterPosicaoGrausCorrente();
-    
-    if (diff < 0)
-      diff = diff * -1;
-
-    Serial.println("procurando...");
-    if (diff <= grausTolerancia) {
-      Serial.println("Parou!");
+    if (obterDiferencaEntreGraus(graus, obterGrausCorrente()) <= grausTolerancia) {
       pararMotores();
+      Serial.println("Robo alinhado!!");
       break;
     }
   }
@@ -446,7 +466,7 @@ unsigned int getDirecaoEntreQuadrantes(float gOrigem, float gDestino) {
  */
 void rotacionarParaCaminhoMaisCurto(float graus) {
   pararMotores();
-  rotacionarPara(graus, getDirecaoEntreQuadrantes(obterPosicaoGrausCorrente(), graus));
+  rotacionarPara(graus, getDirecaoEntreQuadrantes(obterGrausCorrente(), graus));
 }
 
 /**
@@ -455,134 +475,98 @@ void rotacionarParaCaminhoMaisCurto(float graus) {
 void sinalizarAlvoEncontrado() {
   pararMotores();
   digitalWrite(PIN_SINALIZADOR_LED, HIGH);
-  delay(3 * 1000);
+  delay(3000);
 }
 
 /**
- * Convert a String to float value.
+ * Obtem a distancia da String passada na requisicao HTTP.
  * 
- * @param text
- *      - the String
- *
- * @return float value
- *
+ * @param valor - String no formato 111;222 sendo que 111 corresponde
+ * a distancia e 222 ao grau
+ * @return float
  */
-float stringToFloat(String text) {
-  char carray[text.length() + 1];
-  text.toCharArray(carray, sizeof(carray));
-  return atof(carray);
+float obterDistanciaDoRequest(String valor) {
+  int semicolun = valor.indexOf(';');
+  return stringToFloat(valor.substring(0, semicolun));
 }
 
 /**
- * Loga o comando enviado.
+ * Obtem o grau da String passada na requisicao HTTP.
+ * 
+ * @param valor - String no formato 111;222 sendo que 111 corresponde
+ * a distancia e 222 ao grau
+ * @return float
  */
-void logger(char command, String value, char velocidade) {
-  Serial.print(command);  
-  Serial.print(" ");
-  Serial.print(value);
-  Serial.print(" ");
-  Serial.println(velocidade);
+float obterGrausDoRequest(String valor) {
+  int semicolun = valor.indexOf(';');
+  return stringToFloat(valor.substring(semicolun + 1));
 }
 
 /**
- * Executa os comandos recebidos do Android.
- *
- * @param command - comando a ser executado pelo Robo
- * @param value - valor do comando (geralmento o grau de 
- *                 rotacao para o comando rotacionarPara(graus))
- * @param velocidade - velocidade do Robo para o movimento
+ * Funcao para logar os valores obtidos do request.
  */
-void executarComando(char command, String value, char velocidade) {
-  
-  switch(command) {
+void logger(float distancia, float graus, String desc) {
+  Serial.println("");
+  Serial.print("Distancia: ");
+  Serial.print(distancia);
+  Serial.print(" Graus: ");
+  Serial.print(graus);
+  Serial.print(" Desc: ");
+  Serial.print(desc);
+}
 
-    case COMANDO_PARAR_MOTORES:
-      Serial.println("COMANDO_PARAR_MOTORES ");
-      logger(command, value, velocidade);
-      pararMotores(); 
-      break;
+/**
+ * Realiza o operacao de trekking dado uma distancia e os graus para
+ * o destino.
+ *
+ * @param distancia - distancia a percorrer para chegar ao destino
+ * @param graus - o grau de alinhamento do destino
+ * @return char - caractere '1' indicando cone encontrado ('1')
+ *                 ou '0' cone nao encontrado
+ */
+char trekking(float distancia, float graus) {
 
-    case COMANDO_ANDAR_FRENTE:
-      Serial.println("COMANDO_ANDAR_FRENTE ");
-      logger(command, value, velocidade);
-      pararMotores();
-      moverParaFrente(velocidade);
-      break;
-
-    case COMANDO_ANDAR_TRAZ:
-      Serial.println("COMANDO_ANDAR_TRAZ ");
-      logger(command, value, velocidade);
-      pararMotores();
-      moverParaTraz(velocidade);
-      break;
-
-    case COMANDO_GIRAR_DIREITA:
-      Serial.println("COMANDO_GIRAR_DIREITA ");
-      logger(command, value, velocidade);
-      pararMotores();
-      moverParaDireita(velocidade);
-      break;
-
-    case COMANDO_GIRAR_ESQUESDA:
-      Serial.println("COMANDO_GIRAR_ESQUERDA ");
-      logger(command, value, velocidade);
-      pararMotores();
-      moverParaEsquerda(velocidade);
-      break;
-
-    case COMANDO_OBTER_GRAUS:
-      Serial.println("COMANDO_OBTER_GRAUS ");
-      logger(command, value, velocidade);
-      // nada é feito pois, por padrão o grau corrente 
-      // sempre é retornado como resposta
-      break;
-      
-    case COMANDO_ROTACIONAR_PARA:
-      Serial.println("COMANDO_ROTACIONAR_PARA ");
-      logger(command, value, velocidade);
-      pararMotores();
-      rotacionarParaCaminhoMaisCurto(stringToFloat(value));
-      break;
-
-    case COMANDO_LOCALIZAR_CONE:
-      Serial.println("COMANDO_LOCALIZAR_CONE ");
-      logger(command, value, velocidade);
-      pararMotores();
-      boolean isConeEncontrado = false;
-      while(!isConeEncontrado) {
-        isConeEncontrado = encontrarCone();
-        if (isConeEncontrado) {
-          pararMotores();
-          sinalizarAlvoEncontrado();
-        }
+  // inicia busca do cone usando o Sonar
+  if (distancia <= 1) {
+    while(true) {
+      logger(distancia, graus, "buscando o cone via sonar...");
+      if (encontrarCone()) {
+        pararMotores();
+        sinalizarAlvoEncontrado();
+        logger(distancia, graus, "cone encontrado!!!");
+        return '1';
       }
-      break;
+    }
   }
-}
+  
+  // alinha em direcao ao cone
+  if (obterDiferencaEntreGraus(graus, obterGrausCorrente()) >= 15) {
+    rotacionarParaCaminhoMaisCurto(graus);
+    logger(distancia, graus, "alinhando robo em direcao cone...");
+    return '0';
+  }
 
-/**
- * Funcao executada apenas uma vez na inicializacao.
- * Aguarda (delay) em segundos antes de iniciar o trekking.
- * 
- * @param sec segundos para ser aguardado para inicializar o trekking
- */
-boolean isStarted = false;
-void aguardePrimeiraVez(int sec) {
-  if (!isStarted) {
-    delay(sec * 1000);
-    isStarted = true;
+  // despois de alinhado anda em direcao ao cone
+  if (distancia > 1) {
+    if (distancia > 2)
+      moverParaFrente(VELOCIDADE_MAX);
+    else
+      moverParaFrente(VELOCIDADE_MED);
+    logger(distancia, graus, "andando em direcao cone...");
+    return '0';
   }
+
+  return '0';
 }
 
 /**
  * Inicia o servidor HTTP do Robo.
  */
-void initHttpCommandListener() {
+void initHttpValueListener() {
   // listen for incoming clients
   EthernetClient client = server.available();
   int characters = 0;
-  String value = "";
-  char command;
+  String valor = "";
   if (client) {
     while (client.connected()) {
       if (client.available()) {
@@ -590,22 +574,21 @@ void initHttpCommandListener() {
         char c = client.read();
         ++characters;
 
-        // 123456789
-        // GET /1        
-        if (characters == 6) {
-          command = c;
-        } else if (characters > 6 && characters < 10) {
-          value += c;
-        } else if (characters == 10) {
-          
+        // 123456789012
+        // GET /999;999
+        if (characters >= 6 && characters < 13) {
+          valor += c;
+        } else if (characters >= 13) {
+
           aguardePrimeiraVez(5);
-          executarComando(command, value, c);
-                    
+          // Serial.println(valor);
+          char resp = trekking(obterDistanciaDoRequest(valor), obterGrausDoRequest(valor));
+
           // send a standard http response header
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println();
-          client.println(obterPosicaoGrausCorrente());
+          client.println(resp);
 
           break;
         }
@@ -635,5 +618,5 @@ void setup() {
  * Loop principal do Robo.
  */
 void loop() {
-  initHttpCommandListener();
+  initHttpValueListener();
 }

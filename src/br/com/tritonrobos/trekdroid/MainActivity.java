@@ -5,15 +5,19 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import br.com.tritonrobos.trekdroid.http.client.ArduinoHttpClient;
 import br.com.tritonrobos.trekdroid.model.Coordenada;
 
 /**
@@ -22,7 +26,9 @@ import br.com.tritonrobos.trekdroid.model.Coordenada;
  * @author vidolin
  * @since 25/04/2013
  */
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements LocationListener {
+
+	private static final String CONE_ENCONTRADO = "1";
 
 	private EditText edLatitude;
 	private EditText edLongitude;
@@ -30,7 +36,6 @@ public class MainActivity extends Activity {
 	private EditText edCoord2;
 	private EditText edCoord3;
 
-	private Button btAtivarGPS;
 	private Button btSalvarLocalizacao;
 	private Button btIniciarTrekking;
 
@@ -38,6 +43,8 @@ public class MainActivity extends Activity {
 
 	private Coordenada coordenadaCapturada;
 	private Coordenada coordenadaCorrente = new Coordenada();
+
+	private boolean isTrekkingIniciado = false;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -47,6 +54,10 @@ public class MainActivity extends Activity {
 		// StrictMode.ThreadPolicy policy = new
 		// StrictMode.ThreadPolicy.Builder().permitAll().build();
 		// StrictMode.setThreadPolicy(policy);
+
+		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+				SensorManager.SENSOR_DELAY_FASTEST, 0, this);
 
 		setupElements();
 	}
@@ -61,7 +72,6 @@ public class MainActivity extends Activity {
 	 * Atualiza a coordenada corrente com os valores de latitude e longitude dos
 	 * campos da tela.
 	 */
-
 	private Coordenada getCoordenadaCapturada() {
 		coordenadaCapturada = new Coordenada();
 		coordenadaCapturada.setLatitude(Double.valueOf(edLatitude.getText()
@@ -69,18 +79,6 @@ public class MainActivity extends Activity {
 		coordenadaCapturada.setLongitude(Double.valueOf(edLongitude.getText()
 				.toString()));
 		return coordenadaCapturada;
-	}
-
-	/**
-	 * Inicio o servico em background do trekking.
-	 */
-	private void iniciarServicoTrekking() {
-		Intent i = new Intent("TREKKING_SERVICE");
-		i.putExtra("d1", destinos.get(0).toArry());
-		i.putExtra("d2", destinos.get(1).toArry());
-		i.putExtra("d3", destinos.get(2).toArry());
-		i.putExtra("cu", coordenadaCorrente.toArry());
-		startService(i);
 	}
 
 	/**
@@ -94,13 +92,6 @@ public class MainActivity extends Activity {
 		edCoord2 = (EditText) findViewById(R.id.edCoord2);
 		edCoord3 = (EditText) findViewById(R.id.edCoord3);
 
-		btAtivarGPS = (Button) findViewById(R.id.btAtivarGPS);
-		btAtivarGPS.setOnClickListener(new Button.OnClickListener() {
-			public void onClick(View v) {
-				acionarGPS();
-			}
-		});
-
 		btSalvarLocalizacao = (Button) findViewById(R.id.btSalvarLocalizacao);
 		btSalvarLocalizacao.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
@@ -111,7 +102,7 @@ public class MainActivity extends Activity {
 		btIniciarTrekking = (Button) findViewById(R.id.btIniciarTrekking);
 		btIniciarTrekking.setOnClickListener(new Button.OnClickListener() {
 			public void onClick(View v) {
-				iniciarServicoTrekking();
+				isTrekkingIniciado = true;
 			}
 		});
 	}
@@ -164,34 +155,6 @@ public class MainActivity extends Activity {
 	}
 
 	/**
-	 * Método que faz a leitura de fato dos valores recebidos do GPS.
-	 */
-	private void acionarGPS() {
-
-		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-		LocationListener lListener = new LocationListener() {
-			public void onLocationChanged(Location location) {
-				coordenadaCapturada = new Coordenada(location);
-				coordenadaCorrente.setLocation(location);
-				updateCamposCoordenadaCopturada(coordenadaCapturada);
-			}
-
-			public void onStatusChanged(String provider, int status,
-					Bundle extras) {
-			}
-
-			public void onProviderEnabled(String provider) {
-			}
-
-			public void onProviderDisabled(String provider) {
-			}
-		};
-		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,
-				0, lListener);
-	}
-
-	/**
 	 * Atualiza os campos de Latitude/Longitude da coordenada capturada.
 	 * 
 	 * @param destino
@@ -200,6 +163,38 @@ public class MainActivity extends Activity {
 	private void updateCamposCoordenadaCopturada(final Coordenada destino) {
 		edLatitude.setText(destino.getLatitude().toString());
 		edLongitude.setText(destino.getLongitude().toString());
+	}
+
+	/**
+	 * 
+	 */
+	public void onLocationChanged(final Location location) {
+		this.coordenadaCapturada = new Coordenada(location);
+		this.coordenadaCorrente = new Coordenada(location);
+		this.updateCamposCoordenadaCopturada(coordenadaCapturada);
+
+		if (isTrekkingIniciado && !destinos.isEmpty()) {
+			Double distancia = this.coordenadaCorrente
+					.distanciaPara(this.destinos.get(0));
+			Double graus = this.coordenadaCorrente.rolamentoPara(this.destinos
+					.get(0));
+
+			String resp = ArduinoHttpClient.sendValues(distancia, graus);
+			if (CONE_ENCONTRADO.equals(resp))
+				this.destinos.remove(0);
+		}
+	}
+
+	public void onProviderDisabled(String provider) {
+		// TODO Auto-generated method stub
+	}
+
+	public void onProviderEnabled(String provider) {
+		// TODO Auto-generated method stub
+	}
+
+	public void onStatusChanged(String provider, int status, Bundle extras) {
+		// TODO Auto-generated method stub
 	}
 
 }

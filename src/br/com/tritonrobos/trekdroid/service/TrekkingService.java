@@ -12,6 +12,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.Toast;
 import br.com.tritonrobos.trekdroid.http.client.ArduinoHttpClient;
 import br.com.tritonrobos.trekdroid.model.ComandoArduino.Velocidade;
@@ -25,7 +26,7 @@ import br.com.tritonrobos.trekdroid.model.Coordenada;
  */
 public class TrekkingService extends Service implements Runnable {
 
-	private Coordenada coordenadaCorrente = new Coordenada();
+	private Coordenada coordenadaCorrente;
 
 	private ArduinoHttpClient robo = new ArduinoHttpClient();
 
@@ -105,17 +106,10 @@ public class TrekkingService extends Service implements Runnable {
 
 		while (!isProximoCone) {
 
-			// checa de tempos em tempos se o robo esta alinhado com o destino
-			if ((lastTime - new Date().getTime()) > 3000) {
-				// Se a diferenca do grau atual do Robo para o grau de destino
-				// for superior a 45 graus entao, alinhar Robo.
-				if ((this.coordenadaCorrente.rolamentoPara(destino) - this.robo
-						.obterGrauCorrente()) >= 45) {
-					this.alinharRobo(destino);
-					isMovendoParaFrente = false;
-				}
-				lastTime = new Date().getTime();
-			}
+			double distCone = this.coordenadaCorrente.distanciaPara(destino);
+			Log.i("mvidolin.TrekkingService", "distancia cone " + distCone);
+			if (distCone <= 2)
+				isProximoCone = true;
 
 			if (!isMovendoParaFrente) {
 				if (this.coordenadaCorrente.distanciaPara(destino) > 2) {
@@ -124,8 +118,22 @@ public class TrekkingService extends Service implements Runnable {
 				}
 			}
 
-			if (this.coordenadaCorrente.distanciaPara(destino) <= 2)
-				isProximoCone = true;
+			// checa de tempos em tempos se o robo esta alinhado com o destino
+			if ((new Date().getTime() - lastTime) > 3000) {
+				// Se a diferenca do grau atual do Robo para o grau de destino
+				// for superior a 45 graus entao, alinhar Robo.
+				double diff = this.coordenadaCorrente.rolamentoPara(destino)
+						- this.robo.obterGrauCorrente();
+				if (diff < 0)
+					diff = diff * -1;
+
+				if (diff >= 45) {
+					this.alinharRobo(destino);
+					isMovendoParaFrente = false;
+				}
+				lastTime = new Date().getTime();
+			}
+
 		}
 	}
 
@@ -140,6 +148,7 @@ public class TrekkingService extends Service implements Runnable {
 				this.intent.getDoubleArrayExtra("cu")[1]);
 
 		// percorre todos os destinos
+		int i = 1;
 		while (!destinos.isEmpty()) {
 
 			Coordenada destino = destinos.get(0);
@@ -149,13 +158,19 @@ public class TrekkingService extends Service implements Runnable {
 			this.alinharRobo(destino);
 			while (!isConeEncontrado) {
 				if (this.coordenadaCorrente.isNotNull()) {
+					Log.i("mvidolin.TrekkingService",
+							"movendo em direcao ao cone " + i);
 					this.moverDirecaoCone(destino);
+					Log.i("mvidolin.TrekkingService", "localizar cone " + i);
 					if (this.robo.localizarCone()) {
+						Log.i("mvidolin.TrekkingService", "cone encontrado "
+								+ i);
 						destinos.remove(0);
 						break;
 					}
 				}
 			}
+			i++;
 		}
 		Toast.makeText(this, "Fim do Trekking! Ganhamos?", Toast.LENGTH_LONG)
 				.show();

@@ -105,25 +105,25 @@ public class CoordenadaUtil {
 	}
 
 	/**
-	 * Converte o rolamento dem graus em uma String formatada para 3 digitos.
-	 * Removendo as casas decimais e incluindo zero na frente caso seja um valor
-	 * menor que tres digitos.
+	 * Converte um valor em uma String formatada para 3 digitos. Removendo as
+	 * casas decimais e incluindo zero na frente caso seja um valor menor que
+	 * tres digitos.
 	 * 
-	 * @param rolamento
+	 * @param valor
 	 *            {@link Double}
 	 * 
 	 * @return {@link String}
 	 */
-	public static String getRolamentoFormatado(final Double rolamento) {
-		String rol = rolamento.toString();
-		rol = rol.substring(0, rol.indexOf("."));
+	public static String getValorFormatado(final Double valor) {
+		String val = valor.toString();
+		val = val.substring(0, val.indexOf("."));
 
-		if (rol.length() < 2)
-			return "00" + rol;
-		if (rol.length() == 2)
-			return "0" + rol;
+		if (val.length() < 2)
+			return "00" + val;
+		if (val.length() == 2)
+			return "0" + val;
 
-		return rol;
+		return val;
 	}
 
 }
