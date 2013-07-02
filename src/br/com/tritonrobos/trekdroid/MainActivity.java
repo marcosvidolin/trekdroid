@@ -3,16 +3,15 @@ package br.com.tritonrobos.trekdroid;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationProvider;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
@@ -46,14 +45,15 @@ public class MainActivity extends Activity implements LocationListener {
 
 	private boolean isTrekkingIniciado = false;
 
+	@TargetApi(9)
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		// StrictMode.ThreadPolicy policy = new
-		// StrictMode.ThreadPolicy.Builder().permitAll().build();
-		// StrictMode.setThreadPolicy(policy);
+		StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder()
+				.permitAll().build();
+		StrictMode.setThreadPolicy(policy);
 
 		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
@@ -174,13 +174,12 @@ public class MainActivity extends Activity implements LocationListener {
 		this.updateCamposCoordenadaCopturada(coordenadaCapturada);
 
 		if (isTrekkingIniciado && !destinos.isEmpty()) {
-			Double distancia = this.coordenadaCorrente
-					.distanciaPara(this.destinos.get(0));
-			Double graus = this.coordenadaCorrente.rolamentoPara(this.destinos
-					.get(0));
+			Coordenada destino = this.destinos.get(0);
+			Double distancia = this.coordenadaCorrente.distanciaPara(destino);
+			Double graus = this.coordenadaCorrente.rolamentoPara(destino);
 
 			String resp = ArduinoHttpClient.sendValues(distancia, graus);
-			if (CONE_ENCONTRADO.equals(resp))
+			if (CONE_ENCONTRADO.equals(resp.trim()))
 				this.destinos.remove(0);
 		}
 	}

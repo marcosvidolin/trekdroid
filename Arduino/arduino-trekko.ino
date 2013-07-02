@@ -369,6 +369,7 @@ float obterGrausCorrente() {
     heading += 2 * PI;
    
   // Convert radians to degrees for readability.
+  Serial.println(heading * 180 / M_PI);
   return heading * 180 / M_PI;
 }
 
@@ -394,7 +395,7 @@ float obterDiferencaEntreGraus(float g1, float g2) {
  * @param direcao - direcao no qual o Robo ira rotacionar para atingir o grau destino
  */
 void rotacionarPara(float graus, unsigned int direcao) {
-  unsigned int grausTolerancia = 3;
+  unsigned int grausTolerancia = 2;
   
   pararMotores();
   if (direcao == DIREITA)
@@ -545,11 +546,13 @@ char trekking(float distancia, float graus) {
 
   // despois de alinhado anda em direcao ao cone
   if (distancia > 1) {
-    if (distancia > 2)
+    if (distancia > 2) {
+      logger(distancia, graus, "andando em direcao cone...");
       moverParaFrente(VELOCIDADE_MAX);
-    else
+    } else {
+      logger(distancia, graus, "andando em direcao cone...");
       moverParaFrente(VELOCIDADE_MED);
-    logger(distancia, graus, "andando em direcao cone...");
+    }
     return '0';
   }
 
@@ -578,7 +581,7 @@ void initHttpValueListener() {
         } else if (characters >= 13) {
 
           aguardePrimeiraVez(5);
-          // Serial.println(valor);
+          Serial.println(valor);
           char resp = trekking(obterDistanciaDoRequest(valor), obterGrausDoRequest(valor));
 
           // send a standard http response header
